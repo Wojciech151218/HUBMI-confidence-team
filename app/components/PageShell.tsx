@@ -1,4 +1,5 @@
 import Grainient from "./Grainient";
+import { UserStatus } from "./UserStatus";
 
 export function PageShell({ children }: { children: React.ReactNode }) {
   return (
@@ -16,8 +17,9 @@ export function PageShell({ children }: { children: React.ReactNode }) {
         />
       </div>
       {children}
-      <footer className="mx-auto w-full max-w-7xl px-4 py-6 font-secondary text-sm text-muted sm:px-6">
-        © {new Date().getFullYear()} Hub Małopolskich Innowacji
+      <footer className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-6 font-secondary text-sm text-muted sm:px-6">
+        <span>© {new Date().getFullYear()} Hub Małopolskich Innowacji</span>
+        <UserStatus />
       </footer>
     </div>
   );
