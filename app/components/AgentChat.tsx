@@ -26,6 +26,18 @@ export function AgentChat() {
     }
   }, [messages, isOpen, isSending]);
 
+  // On mobile the chat is full-screen, so stop the page behind it from scrolling.
+  useEffect(() => {
+    if (!isOpen || !window.matchMedia("(max-width: 639px)").matches) {
+      return;
+    }
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [isOpen]);
+
   if (hidden) {
     return null;
   }
@@ -45,13 +57,15 @@ export function AgentChat() {
   return (
     <div
       className={`fixed right-4 z-50 flex flex-col items-end gap-3 sm:right-6 ${
-        onHome ? "bottom-24 sm:bottom-6" : "bottom-6"
+        onHome
+          ? "bottom-[calc(5.5rem+env(safe-area-inset-bottom))] sm:bottom-6"
+          : "bottom-[calc(1rem+env(safe-area-inset-bottom))] sm:bottom-6"
       }`}
     >
       {isOpen && (
         <section
           aria-label="Rozmowa z asystentem"
-          className="flex h-[min(32rem,70vh)] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-[rgb(29_95_209_/_0.14)] bg-[rgb(255_255_255_/_0.82)] shadow-[0_18px_50px_-12px_rgb(29_95_209_/_0.28)] backdrop-blur-xl"
+          className="fixed inset-0 flex h-[100dvh] w-full flex-col overflow-hidden bg-[rgb(255_255_255_/_0.96)] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] backdrop-blur-xl sm:static sm:h-[min(32rem,70vh)] sm:w-[min(24rem,calc(100vw-2rem))] sm:rounded-3xl sm:border sm:border-[rgb(29_95_209_/_0.14)] sm:bg-[rgb(255_255_255_/_0.82)] sm:p-0 sm:shadow-[0_18px_50px_-12px_rgb(29_95_209_/_0.28)]"
         >
           <header className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-3">
             <div>
@@ -124,7 +138,7 @@ export function AgentChat() {
                 }}
                 rows={2}
                 placeholder="O jaki dokument pytasz?"
-                className="min-h-[2.75rem] min-w-0 flex-1 resize-none rounded-2xl bg-white/70 px-3 py-2 font-secondary text-sm text-foreground outline-none ring-1 ring-hairline focus:ring-2 focus:ring-accent"
+                className="min-h-[2.75rem] min-w-0 flex-1 resize-none rounded-2xl bg-white/70 px-3 py-2 font-secondary text-base text-foreground sm:text-sm outline-none ring-1 ring-hairline focus:ring-2 focus:ring-accent"
               />
               <button
                 type="submit"
@@ -144,7 +158,9 @@ export function AgentChat() {
         onClick={toggle}
         aria-expanded={isOpen}
         aria-label={isOpen ? "Zamknij asystenta" : "Otwórz asystenta"}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-[0_18px_50px_-12px_rgb(29_95_209_/_0.45)] transition-[transform,background-color] hover:bg-accent-hover active:scale-[0.98]"
+        className={`${
+          isOpen ? "hidden sm:flex" : "flex"
+        } h-12 w-12 items-center justify-center rounded-full bg-accent text-white shadow-[0_18px_50px_-12px_rgb(29_95_209_/_0.45)] transition-[transform,background-color] hover:bg-accent-hover active:scale-[0.98] sm:h-14 sm:w-14`}
       >
         {isOpen ? <X aria-hidden size={26} weight="bold" /> : <ChatCircle aria-hidden size={26} weight="bold" />}
       </button>

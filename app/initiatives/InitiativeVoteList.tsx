@@ -1,9 +1,9 @@
 "use client";
 
-import { MapPin, Plus } from "@phosphor-icons/react";
 import { useEffect, useState, useTransition } from "react";
 import { useUser } from "@/app/_components/user-context";
 import { AuthError } from "../components/AuthField";
+import { InitiativeCard } from "./InitiativeCard";
 import { listInitiatives, toggleVote, type InitiativeListItem } from "./actions";
 
 export function InitiativeVoteList() {
@@ -66,39 +66,13 @@ export function InitiativeVoteList() {
       ) : (
         <ol className="flex flex-col gap-3">
           {items.map((item, index) => (
-            <li
+            <InitiativeCard
               key={item.id}
-              className="liquid-glass-chip flex items-start gap-4 rounded-3xl p-5 text-left transition-transform duration-300"
-            >
-              <span className="w-6 shrink-0 pt-0.5 text-lg font-bold text-muted">{index + 1}.</span>
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <h2 className="text-lg font-bold leading-tight">{item.title}</h2>
-                <p className="whitespace-pre-line font-secondary text-sm text-muted">
-                  {item.description}
-                </p>
-                {item.location ? (
-                  <span className="inline-flex items-center gap-1 font-secondary text-xs text-muted">
-                    <MapPin aria-hidden size={14} weight="bold" />
-                    {item.location}
-                  </span>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => handleVote(item.id)}
-                disabled={userId === null || pendingId !== null}
-                aria-pressed={item.voted}
-                aria-label={item.voted ? `Cofnij głos na „${item.title}”` : `Zagłosuj na „${item.title}”`}
-                className={`flex shrink-0 flex-col items-center gap-0.5 rounded-2xl px-3 py-2 font-medium transition-[transform,background-color,color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-60 ${
-                  item.voted
-                    ? "bg-accent text-white hover:bg-accent-hover"
-                    : "bg-accent-soft text-accent hover:bg-accent/20"
-                }`}
-              >
-                <Plus aria-hidden size={18} weight="bold" />
-                <span className="text-sm tabular-nums">{item.votes}</span>
-              </button>
-            </li>
+              item={item}
+              rank={index + 1}
+              onVote={handleVote}
+              voteDisabled={userId === null || pendingId !== null}
+            />
           ))}
         </ol>
       )}

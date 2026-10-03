@@ -11,6 +11,7 @@ export type InitiativeListItem = {
   location: string | null;
   votes: number;
   voted: boolean;
+  createdAt: string;
 };
 
 type InitiativeRow = {
@@ -20,6 +21,7 @@ type InitiativeRow = {
   location: string | null;
   votes: string;
   voted: boolean | null;
+  createdAt: Date;
 };
 
 function toUserId(value: number | null) {
@@ -38,6 +40,7 @@ export async function listInitiatives(userId: number | null): Promise<Initiative
     .addSelect("initiative.location", "location")
     .addSelect("COUNT(vote.id)", "votes")
     .addSelect("BOOL_OR(vote.user_id = :userId)", "voted")
+    .addSelect("initiative.created_at", "createdAt")
     .setParameter("userId", toUserId(userId))
     .groupBy("initiative.id")
     .orderBy("COUNT(vote.id)", "DESC")
@@ -51,6 +54,7 @@ export async function listInitiatives(userId: number | null): Promise<Initiative
     location: row.location,
     votes: Number(row.votes),
     voted: row.voted === true,
+    createdAt: new Date(row.createdAt).toISOString(),
   }));
 }
 
