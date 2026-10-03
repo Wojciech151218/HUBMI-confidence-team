@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
-import { In } from "typeorm";
-import { Document } from "@/db/document";
-import { getDataSource } from "@/lib/data-source";
-import { createEmbedding } from "@/lib/embedding";
+import { searchDocuments } from "@/lib/document-search";
 
 const defaultLimit = 10;
 const maxLimit = 50;
-const distanceSql = "document.embedding <=> CAST(:embedding AS vector)";
 
 function parseCategories(searchParams: URLSearchParams): string[] {
   const names = searchParams
@@ -49,73 +45,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: limit.error }, { status: 400 });
   }
 
-  const embedding = await createEmbedding(query);
-  const ds = await getDataSource();
-  const repo = ds.getRepository(Document);
+  const results = await searchDocuments({ query, categories, limit });
 
-  const search = repo
-    .createQueryBuilder("document")
-    .select([
-      "document.id",
-      "document.body",
-      "document.minioUrl",
-      "document.createdAt",
-    ])
-    .where("document.embedding IS NOT NULL")
-    .addSelect(`1 - (${distanceSql})`, "similarity")
-    .orderBy(distanceSql, "ASC")
-    .setParameter("embedding", `[${embedding.join(",")}]`)
-    .limit(limit);
+  console.log("documents GET search:", query, categories, results.length);
 
-  if (categories.length > 0) {
-    search.andWhere((builder) => {
-      const match = builder
-        .subQuery()
-        .select("filtered.id")
-        .from(Document, "filtered")
-        .innerJoin("filtered.categories", "category")
-        .where("LOWER(category.name) IN (:...categoryNames)")
-        .getQuery();
-      return `document.id IN ${match}`;
-    });
-    search.setParameter("categoryNames", categories);
-  }
-
-  const { entities, raw } = await search.getRawAndEntities();
-  const ids = entities.map((document) => document.id);
-  const withCategories =
-    ids.length === 0
-      ? []
-      : await repo.find({
-          where: { id: In(ids) },
-          relations: { categories: true },
-          select: {
-            id: true,
-            categories: { id: true, name: true },
-          },
-        });
-
-  const categoryNamesById = new Map(
-    withCategories.map((document) => [
-      document.id,
-      document.categories
-        .map((category) => category.name)
-        .sort((left, right) => left.localeCompare(right)),
-    ]),
-  );
-
-  console.log("documents GET search:", query, categories, entities.length);
-
-  return NextResponse.json({
-    query,
-    categories,
-    results: entities.map((document, index) => ({
-      id: document.id,
-      body: document.body,
-      minioUrl: document.minioUrl,
-      categories: categoryNamesById.get(document.id) ?? [],
-      similarity: Number(raw[index]?.similarity),
-      createdAt: document.createdAt,
-    })),
-  });
+  return NextResponse.json({ query, categories, results });
 }
