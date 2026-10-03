@@ -1,15 +1,14 @@
+import { isOffTopicGeneralQuestion, offTopicRefusal } from "./guardrails";
 import type { Agent } from "./types";
 
-const helpText = `Hub Małopolskich Innowacji pomaga znaleźć modele innowacji społecznych i odpowiedzieć na pytania o nie.
-• Wpisz hasło, np. „bezdomność” albo „otyłość u dzieci”, aby zobaczyć pasujące dokumenty.
-• Zadaj pytanie, np. „Jak działa Mobilny Punkt Higieniczny?”, aby dostać odpowiedź ze źródłami.
-• Zawęź wyniki, wybierając kategorię.`;
+const helpText = `Ta aplikacja pomaga znaleźć pomysły, które już działają w Małopolsce i rozwiązują problemy społeczne. Wpisujesz temat albo pytanie, na przykład o bezdomność albo zdrowie dzieci, a asystent szuka pasujących dokumentów i krótko je wyjaśnia. Możesz też zawęzić szukanie do kategorii, na przykład „edukacja” albo „zdrowie”.`;
 
 export const helpAgent: Agent = {
   name: "help",
   description:
-    "Explains what this hub is and how to use it. Pick it for greetings, questions about the service itself, or messages unrelated to innovation documents.",
-  async run() {
-    return { kind: "answer", answer: helpText, sources: [] };
+    "Wyjaśnia prostymi słowami, co robi ta aplikacja, albo grzecznie odmawia przy tematach spoza Małopolski i pomocy społecznej. Wybierz go przy powitaniach, pytaniach o samą usługę albo ogólnych pytaniach niezwiązanych z dokumentami o innowacjach.",
+  async run({ message }) {
+    const answer = isOffTopicGeneralQuestion(message) ? offTopicRefusal(message) : helpText;
+    return { kind: "answer", answer, sources: [] };
   },
 };

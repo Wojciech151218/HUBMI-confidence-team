@@ -4,7 +4,7 @@ import type { Agent } from "./types";
 export const searchAgent: Agent = {
   name: "search",
   description:
-    "Lists documents (innovation models, projects) matching a topic or keywords. Pick it when the user wants to find, browse or list materials rather than get an explanation.",
+    "Wypisuje dokumenty (modele innowacji, projekty) pasujące do tematu lub haseł. Wybierz go, gdy użytkownik chce znaleźć, przejrzeć albo wylistować materiały, a nie dostać wyjaśnienia.",
   async run({ query, categories }) {
     const results = await searchDocuments({ query, categories, limit: 10 });
     return { kind: "results", results };

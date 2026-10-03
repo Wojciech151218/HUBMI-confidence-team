@@ -1,4 +1,5 @@
 import { In } from "typeorm";
+import { Category } from "@/db/category";
 import type { Document } from "@/db/document";
 import { getDataSource } from "@/lib/data-source";
 import { createEmbedding } from "@/lib/embedding";
@@ -95,4 +96,13 @@ export async function searchDocuments({
     similarity: Number(raw[index]?.similarity),
     createdAt: document.createdAt,
   }));
+}
+
+export async function listCategoryNames(): Promise<string[]> {
+  const ds = await getDataSource();
+  const categories = await ds.getRepository(Category).find({
+    select: { id: true, name: true },
+    order: { name: "ASC" },
+  });
+  return categories.map((category) => category.name);
 }
