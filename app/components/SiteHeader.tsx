@@ -9,7 +9,7 @@ export function SiteHeader() {
           href="/"
           className="flex items-center gap-4 rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
         >
-          <span className="flex shrink-0 items-center dark:rounded-full dark:bg-slate-50 dark:px-4 dark:py-1.5">
+          <span className="flex shrink-0 items-center">
             <Image
               src="/malopolska_logo.png"
               alt="Małopolska"
