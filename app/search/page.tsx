@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { searchDocuments, type DocumentHit } from "@/lib/document-search";
-import { markdownExcerpt } from "@/lib/markdown-excerpt";
+import { markdownPreview } from "@/lib/markdown-excerpt";
 import { DocumentResultCard } from "../components/DocumentResultCard";
 import { Logo } from "../components/Logo";
 import { PageShell } from "../components/PageShell";
@@ -76,7 +76,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
                   index={index}
                   hit={{
                     ...hit,
-                    excerpt: markdownExcerpt(hit.body),
+                    preview: markdownPreview(hit.body),
                     createdAt: new Date(hit.createdAt).toISOString(),
                   }}
                 />
