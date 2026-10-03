@@ -5,29 +5,9 @@ import {
   Entity,
   PrimaryGeneratedColumn,
 } from "typeorm";
+import { embeddingDimensions } from "@/lib/embedding";
 
-function toVectorLiteral(value: number[] | null): string | null {
-  if (!value) {
-    return null;
-  }
-
-  return `[${value.join(",")}]`;
-}
-
-function fromVectorLiteral(value: string | null): number[] | null {
-  if (!value) {
-    return null;
-  }
-
-  return value
-    .replace(/^\[/, "")
-    .replace(/\]$/, "")
-    .split(",")
-    .filter((part) => part.length > 0)
-    .map(Number);
-}
-
-@Entity({ name: "documents", synchronize: false })
+@Entity({ name: "documents" })
 export class Document {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -39,12 +19,9 @@ export class Document {
   minioUrl!: string | null;
 
   @Column({
-    type: "text",
+    type: "vector",
+    length: String(embeddingDimensions),
     nullable: true,
-    transformer: {
-      to: toVectorLiteral,
-      from: fromVectorLiteral,
-    },
   })
   embedding!: number[] | null;
 
