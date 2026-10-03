@@ -1,0 +1,21 @@
+---
+description: Avoid deep prop drilling; use Context and Providers after two layers
+globs: app/**/*.tsx
+alwaysApply: false
+---
+
+# Context instead of prop drilling
+
+If UI state or callbacks would pass through **more than two** intermediate components, stop drilling props and use **React Context** with a **Provider**.
+
+- Colocate `createContext`, the Provider component, and a `useX()` hook in one module (e.g. `app/_components/feature-context.tsx` or `lib/context/...` if shared).
+- Wrap the smallest subtree that needs the value (often a layout segment or a page shell), not the entire app unless necessary.
+- Keep Providers in **client** components (`"use client"`); Server Components can pass serializable initial data as props into that Provider.
+- Prefer one focused context per concern (session UI, selection, wizard step) rather than a single mega-context.
+
+```tsx
+// ❌ Avoid: Page → A → B → C all forwarding the same props
+// ✅ Prefer: <FeatureProvider value={...}><Page /></FeatureProvider> and useFeature() in deep children
+```
+
+Server-only data (TypeORM, OpenAI) stays in Server Components / Server Actions; context is for client tree state and handlers, not for bypassing TypeORM.

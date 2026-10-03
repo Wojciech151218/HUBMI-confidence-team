@@ -23,8 +23,8 @@ OPENAI_API_KEY=
 docker compose up --build
 ```
 
-- App: http://localhost:3000
-- Postgres: `localhost:5432` (database `hubmi`, user `postgres`, password `postgres`)
+- App: http://localhost:3001 (container listens on 3000)
+- Postgres: `localhost:5433` on the host → `5432` in the container (database `hubmi`, user `postgres`, password `postgres`). Use port `5433` in `DATABASE_URL` when connecting from the host; the `web` service still uses `db:5432` inside Compose.
 
 The first start builds the Next.js image and enables the `vector` extension. Later starts can omit `--build` unless dependencies change:
 
@@ -40,7 +40,7 @@ docker compose down
 
 ## Live reload
 
-The app source is bind-mounted into the `web` container, and Next.js runs in dev mode with file polling. Edit files on the host (for example `app/page.tsx`) and refresh http://localhost:3000. Do not rebuild the image for source changes.
+The app source is bind-mounted into the `web` container, and Next.js runs in dev mode with file polling. Edit files on the host (for example `app/page.tsx`) and refresh http://localhost:3001. Do not rebuild the image for source changes.
 
 Rebuild after changing `package.json` or `package-lock.json`:
 
