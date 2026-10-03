@@ -17,11 +17,11 @@ export default function Home() {
           <Logo className="h-14 md:h-16" />
         </div>
         <h1
-          className="fade-up text-3xl font-bold leading-[1.1] tracking-tight md:text-5xl"
+          className="fade-up slogan text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl"
           style={{ "--i": 1 } as React.CSSProperties}
         >
           Odkryj innowacje{" "}
-          <span className="whitespace-nowrap text-accent">w Małopolsce</span>
+          <span className="shimmer-gradient slogan-accent whitespace-nowrap">w Małopolsce</span>
         </h1>
         <SuggestionBubbles
           groups={SUGGESTION_GROUPS}
