@@ -15,7 +15,7 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hubmi
 OPENAI_API_KEY=
 ```
 
-`OPENAI_API_KEY` selects the OpenAI backend in `lib/embedding.ts`. Leave it empty to use mock embeddings until you want real vectors. Inside Compose, `DATABASE_URL` is overridden so the app reaches Postgres at the `db` service.
+`OPENAI_API_KEY` selects the OpenAI backend in `lib/embedding.ts`. Leave it empty to use local keyword embeddings (hashed words, stems and trigrams; no API calls). After switching backends, run `update documents set embedding = null` so documents are re-embedded with the same model as queries. Check search quality with `npm run eval:search`. Inside Compose, `DATABASE_URL` is overridden so the app reaches Postgres at the `db` service.
 
 ## Run
 
@@ -54,3 +54,4 @@ docker compose up --build
 - PostgreSQL 16 with the pgvector extension
 - TypeORM mapping for a `documents` table (`embedding vector(1536)`)
 - OpenAI client (`text-embedding-3-small`) used by the embed form once `OPENAI_API_KEY` is set
+- Knowledge base seeded from `md-database/*.md` on every app start (`lib/seed-documents.ts`). Each file starts with a `title:` / `categories: [...]` frontmatter block. The embedding is built from the title only and is created once per document (clear `documents.embedding` to force a re-embed). Documents or categories without a backing file are deleted.

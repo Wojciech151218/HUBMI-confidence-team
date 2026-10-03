@@ -1,4 +1,4 @@
-import { In } from "typeorm";
+import { In, IsNull } from "typeorm";
 import type { Document } from "@/db/document";
 import { getDataSource } from "@/lib/data-source";
 import { createEmbedding } from "@/lib/embedding";
@@ -25,11 +25,35 @@ export type DocumentHit = {
   createdAt: Date;
 };
 
+// Embeds every document that has no vector yet, from its title plus category names: short
+// search queries match that focused text far more closely than the whole diluted body,
+// and the categories add the topic keywords a short title lacks.
+// Search runs this too, so a cleared or failed embedding can't hide a document.
+export async function embedMissingDocuments(): Promise<number> {
+  const ds = await getDataSource();
+  const repo = ds.getRepository<Document>(documentEntity);
+  const missing = await repo.find({
+    where: { embedding: IsNull() },
+    relations: { categories: true },
+    select: { id: true, title: true, body: true, categories: { id: true, name: true } },
+  });
+
+  for (const document of missing) {
+    const title = document.title?.trim() || document.body.slice(0, 500);
+    const categories = document.categories.map((category) => category.name).join(", ");
+    const input = categories ? `${title}\n${categories}` : title;
+    await repo.update(document.id, { embedding: await createEmbedding(input) });
+  }
+
+  return missing.length;
+}
+
 export async function searchDocuments({
   query,
   categories = [],
   limit,
 }: DocumentSearchOptions): Promise<DocumentHit[]> {
+  await embedMissingDocuments();
   const embedding = await createEmbedding(query);
   const ds = await getDataSource();
   const repo = ds.getRepository<Document>(documentEntity);

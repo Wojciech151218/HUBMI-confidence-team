@@ -19,7 +19,6 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
       - ./db/migrations/0001_create_documents.sql:/docker-entrypoint-initdb.d/0001_create_documents.sql:ro
-      - ./db/migrations/0002_seed_documents.sql:/docker-entrypoint-initdb.d/0002_seed_documents.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d hubmi"]
       interval: 5s
@@ -62,7 +61,6 @@ services:
       - .:/app
       - web_node_modules:/app/node_modules
       - web_next:/app/.next
-      - /app/inbox
     depends_on:
       db:
         condition: service_healthy

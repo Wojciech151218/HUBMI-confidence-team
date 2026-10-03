@@ -6,7 +6,8 @@
     "dev": "next dev --hostname 0.0.0.0 --port 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "eval:search": "node scripts/eval-search.mjs"
   },
   "dependencies": {
     "@langchain/core": "^1.2.14",
@@ -15,13 +16,18 @@
     "@langchain/openai": "^1.6.2",
     "@phosphor-icons/react": "^2.1.10",
     "d3-force": "^3.0.0",
+    "mdast-util-from-markdown": "^2.1.0",
+    "mdast-util-to-string": "^4.0.0",
     "next": "16.3.8",
     "ogl": "^1.0.11",
     "openai": "^7.27.0",
     "pg": "^8.23.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-markdown": "^10.1.0",
     "reflect-metadata": "^0.2.2",
+    "rehype-slug": "^6.0.0",
+    "remark-gfm": "^4.0.1",
     "typeorm": "^1.1.1",
     "zod": "^4.6.5"
   },

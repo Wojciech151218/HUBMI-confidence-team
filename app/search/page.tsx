@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { searchDocuments, type DocumentHit } from "@/lib/document-search";
+import { markdownExcerpt } from "@/lib/markdown-excerpt";
+import { DocumentResultCard } from "../components/DocumentResultCard";
 import { Logo } from "../components/Logo";
 import { PageShell } from "../components/PageShell";
 import { SearchBar } from "../components/SearchBar";
@@ -9,8 +11,6 @@ export const metadata: Metadata = {
 };
 
 const resultLimit = 10;
-
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 function parseCategories(value: string | string[] | undefined): string[] {
   const values = Array.isArray(value) ? value : value ? [value] : [];
@@ -70,8 +70,16 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
               Wyniki dla „{searchText}”
             </h1>
             <ol className="flex flex-col gap-3">
-              {results.map((hit) => (
-                <ResultCard key={hit.id} hit={hit} />
+              {results.map((hit, index) => (
+                <DocumentResultCard
+                  key={hit.id}
+                  index={index}
+                  hit={{
+                    ...hit,
+                    excerpt: markdownExcerpt(hit.body),
+                    createdAt: new Date(hit.createdAt).toISOString(),
+                  }}
+                />
               ))}
             </ol>
           </section>
@@ -87,49 +95,5 @@ function StatusMessage({ title, body }: { title: string; body: string }) {
       <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
       <p className="max-w-[60ch] font-secondary text-muted">{body}</p>
     </section>
-  );
-}
-
-function ResultCard({ hit }: { hit: DocumentHit }) {
-  const match = Math.round(Math.max(0, Math.min(1, hit.similarity)) * 100);
-  const createdAt = new Date(hit.createdAt);
-
-  return (
-    <li className="liquid-glass-chip flex flex-col gap-3 rounded-2xl p-5">
-      {hit.title && (
-        <h2 className="text-base font-bold tracking-tight text-foreground">
-          {hit.title}
-        </h2>
-      )}
-      <p className="line-clamp-4 font-secondary leading-relaxed text-foreground">
-        {hit.body}
-      </p>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
-        {hit.categories.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5" aria-label="Kategorie">
-            {hit.categories.map((name) => (
-              <li
-                key={name}
-                className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent"
-              >
-                {name}
-              </li>
-            ))}
-          </ul>
-        )}
-        <span>Dopasowanie {match}%</span>
-        <time dateTime={createdAt.toISOString()}>{dateFormat.format(createdAt)}</time>
-        {hit.minioUrl && (
-          <a
-            href={hit.minioUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-auto rounded-full font-medium text-accent hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            Otwórz dokument
-          </a>
-        )}
-      </div>
-    </li>
   );
 }
