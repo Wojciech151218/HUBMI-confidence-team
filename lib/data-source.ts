@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
-import { embeddingDimensions } from "./openai";
+import { embeddingDimensions } from "./embedding";
 import { Document } from "./document";
 
 const globalForDataSource = globalThis as unknown as {

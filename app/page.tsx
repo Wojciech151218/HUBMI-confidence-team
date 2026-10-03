@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { getDataSource } from "@/lib/data-source";
 import { Document } from "@/lib/document";
-import { createEmbedding, isOpenAIConfigured } from "@/lib/openai";
+import { createEmbedding, getEmbeddingProvider } from "@/lib/embedding";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,7 @@ export default async function Home() {
   const documents = await dataSource.getRepository(Document).find({
     order: { id: "ASC" },
   });
-  const openAIConfigured = isOpenAIConfigured();
+  const embeddingMode = getEmbeddingProvider().mode;
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-16">
@@ -40,7 +40,7 @@ export default async function Home() {
         </h1>
         <p className="text-zinc-600 dark:text-zinc-400">
           pgvector {extension?.extversion ?? "missing"} ·{" "}
-          {openAIConfigured
+          {embeddingMode === "openai"
             ? "OpenAI embeddings"
             : "mock embeddings (set OPENAI_API_KEY for real vectors)"}
         </p>

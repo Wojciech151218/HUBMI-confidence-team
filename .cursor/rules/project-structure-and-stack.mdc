@@ -6,7 +6,7 @@ alwaysApply: true
 # Project structure
 
 - `app/` — Next.js App Router: `layout.tsx`, route segments as folders, UI in `page.tsx`, HTTP APIs in `route.ts`, mutations via `"use server"` actions colocated with pages or in dedicated modules.
-- `lib/` — Server-side shared code: TypeORM (`data-source.ts`, entity files such as `document.ts`), OpenAI client (`openai.ts`). Import with `@/lib/...`.
+- `lib/` — Server-side shared code: TypeORM (`data-source.ts`, entity files such as `document.ts`), embeddings via `embedding.ts` (`EmbeddingProvider`). Import with `@/lib/...`.
 - `db/init.sql` — Postgres bootstrap (`vector` extension). Schema helpers also run from `getDataSource()` in `lib/data-source.ts`.
 - `docker-compose.yml`, `Dockerfile` — Dev stack: bind-mounted source, polling for hot reload, Postgres with pgvector.
 - `instrumentation.ts` — Loads `reflect-metadata` on the Node runtime (required for TypeORM decorators).
@@ -15,7 +15,7 @@ alwaysApply: true
 
 - **Routing & UI**: Prefer App Router pages and layouts under `app/`. Add new routes as `app/<segment>/page.tsx`; use `app/api/.../route.ts` for REST-style handlers when a Route Handler fits better than a Server Action.
 - **Database**: Talk to Postgres only through TypeORM — `await getDataSource()` then repositories or parameterized `query()`. Define entities in `lib/` with decorators; register new entities on `AppDataSource` in `lib/data-source.ts`. Use pgvector columns where embeddings are stored (see `Document` entity).
-- **OpenAI**: Use `lib/openai.ts` (`getOpenAIClient`, `createEmbedding`); read `OPENAI_API_KEY` from env, never hardcode secrets.
+- **Embeddings**: Use `getEmbeddingProvider()` / `createEmbedding()` from `lib/embedding.ts`; mock vs OpenAI is chosen inside that module from `OPENAI_API_KEY`.
 - **Server vs client**: Default to Server Components and Server Actions for DB and OpenAI work. Add `"use client"` only for browser interactivity (forms that need client state, hooks, context consumers).
 
 Do not introduce a second ORM or ad-hoc `pg` pools outside TypeORM unless explicitly requested.
