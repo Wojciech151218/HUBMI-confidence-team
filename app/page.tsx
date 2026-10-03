@@ -25,7 +25,7 @@ export default function Home() {
         </h1>
         <SuggestionBubbles
           groups={SUGGESTION_GROUPS}
-          className="fade-up min-h-[420px] flex-1"
+          className="fade-up min-h-[340px] flex-1 sm:min-h-[420px]"
         />
       </main>
       <div

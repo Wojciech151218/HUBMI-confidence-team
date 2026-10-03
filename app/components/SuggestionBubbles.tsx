@@ -19,12 +19,37 @@ export type SuggestionGroup = {
   labels: string[];
 };
 
-type BubbleNode = SimulationNodeDatum & { r: number; group: number };
+type BubbleState = "idle" | "active" | "related" | "muted";
+
+type BubbleNode = SimulationNodeDatum & {
+  r: number;
+  group: number;
+  state: BubbleState;
+  // Animated scale, driven by a small spring so bubbles bounce when their state changes.
+  scale: number;
+  scaleVelocity: number;
+  // Jelly stretch of the dragged bubble along its direction of travel.
+  stretch: number;
+  stretchAngle: number;
+};
 type BubbleLink = SimulationLinkDatum<BubbleNode>;
 
-type DragState = { index: number; startX: number; startY: number; moved: boolean };
+type DragState = {
+  index: number;
+  startX: number;
+  startY: number;
+  lastX: number;
+  lastY: number;
+  lastTime: number;
+  moved: boolean;
+};
 
-const PADDING = 8;
+const STATE_SCALE: Record<BubbleState, number> = {
+  idle: 1,
+  active: 1.12,
+  related: 1.05,
+  muted: 0.9,
+};
 
 type SuggestionBubblesProps = {
   groups: SuggestionGroup[];
@@ -33,8 +58,9 @@ type SuggestionBubblesProps = {
 
 // Each topic gets its own anchor on a ring around the centre, so groups settle apart.
 function groupCenters(count: number, width: number, height: number) {
-  const radiusX = width * 0.28;
-  const radiusY = height * 0.26;
+  const compact = width < 640;
+  const radiusX = width * (compact ? 0.22 : 0.28);
+  const radiusY = height * (compact ? 0.24 : 0.26);
   return Array.from({ length: count }, (_, i) => {
     const angle = (2 * Math.PI * i) / count - Math.PI / 2;
     return { x: width / 2 + Math.cos(angle) * radiusX, y: height / 2 + Math.sin(angle) * radiusY };
@@ -52,6 +78,8 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
   const centersRef = useRef<{ x: number; y: number }[]>([]);
   const draggingGroupRef = useRef<number | null>(null);
   const applyAnchorsRef = useRef<() => void>(() => {});
+  const reduceMotionRef = useRef(false);
+  const targetStretchRef = useRef(0);
   const items = groups.flatMap((group, groupIndex) =>
     group.labels.map((label) => ({ label, group: groupIndex })),
   );
@@ -62,12 +90,14 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
     if (!container) return;
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    reduceMotionRef.current = reduceMotion;
     let width = container.clientWidth;
     let height = container.clientHeight;
 
     const compact = width < 640;
-    const minDiameter = compact ? 104 : 136;
-    const labelPadding = compact ? 32 : 56;
+    const minDiameter = compact ? 72 : 136;
+    const labelPadding = compact ? 18 : 56;
+    const gap = compact ? 4 : 8;
 
     centersRef.current = groupCenters(groups.length, width, height);
     const centers = () => centersRef.current;
@@ -83,6 +113,11 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
       return {
         r: diameter / 2,
         group,
+        state: "idle",
+        scale: 1,
+        scaleVelocity: 0,
+        stretch: 0,
+        stretchAngle: 0,
         x: centers()[group].x + (Math.random() - 0.5) * 40,
         y: centers()[group].y + (Math.random() - 0.5) * 40,
       };
@@ -103,9 +138,27 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
         node.y = Math.max(node.r, Math.min(height - node.r, node.y ?? 0));
         const button = buttonRefs.current[i];
         if (!button) return;
-        button.style.transform = `translate3d(${node.x - node.r}px, ${node.y - node.r}px, 0)`;
-        button.style.opacity = "1";
+
+        if (reduceMotion) {
+          node.scale = STATE_SCALE[node.state];
+        } else {
+          node.scaleVelocity += (STATE_SCALE[node.state] - node.scale) * 0.25;
+          node.scaleVelocity *= 0.65;
+          node.scale += node.scaleVelocity;
+          const targetStretch = node.state === "active" ? targetStretchRef.current : 0;
+          node.stretch += (targetStretch - node.stretch) * 0.25;
+        }
+
+        const sx = node.scale * (1 + node.stretch);
+        const sy = node.scale * (1 - node.stretch * 0.6);
+        const angle = node.stretchAngle;
+        button.style.transform =
+          `translate3d(${node.x - node.r}px, ${node.y - node.r}px, 0) ` +
+          `rotate(${angle}rad) scale(${sx}, ${sy}) rotate(${-angle}rad)`;
       });
+      // The stretch relaxes whenever the pointer stops moving.
+      targetStretchRef.current *= 0.85;
+      container.dataset.ready = "true";
     };
 
     // The dragged bubble's group is released from its anchor so its links can pull it along.
@@ -120,14 +173,14 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
           .distance((link) => {
             const source = link.source as BubbleNode;
             const target = link.target as BubbleNode;
-            return source.r + target.r + PADDING * 2;
+            return source.r + target.r + gap * 2;
           })
           .strength(0.6),
       )
       .force("charge", forceManyBody<BubbleNode>().strength(-40))
       .force("x", anchorX())
       .force("y", anchorY())
-      .force("collide", forceCollide<BubbleNode>((d) => d.r + PADDING).strength(0.9))
+      .force("collide", forceCollide<BubbleNode>((d) => d.r + gap).strength(0.9))
       .on("tick", render);
     simRef.current = sim;
     applyAnchorsRef.current = () => {
@@ -164,6 +217,23 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupsKey]);
 
+  function setStates(activeIndex: number | null) {
+    const nodes = nodesRef.current;
+    const activeGroup = activeIndex === null ? null : nodes[activeIndex]?.group;
+    nodes.forEach((node, i) => {
+      node.state =
+        activeIndex === null
+          ? "idle"
+          : i === activeIndex
+            ? "active"
+            : node.group === activeGroup
+              ? "related"
+              : "muted";
+      const button = buttonRefs.current[i];
+      if (button) button.dataset.state = node.state;
+    });
+  }
+
   function localPoint(event: React.PointerEvent) {
     const rect = containerRef.current!.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
@@ -173,10 +243,19 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
     const node = nodesRef.current[index];
     if (!node) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = { index, startX: event.clientX, startY: event.clientY, moved: false };
+    dragRef.current = {
+      index,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      lastTime: event.timeStamp,
+      moved: false,
+    };
     node.fx = node.x;
     node.fy = node.y;
     draggingGroupRef.current = node.group;
+    setStates(index);
     applyAnchorsRef.current();
     simRef.current?.alphaTarget(0.3).restart();
   }
@@ -191,6 +270,20 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
     const point = localPoint(event);
     node.fx = point.x;
     node.fy = point.y;
+
+    if (!reduceMotionRef.current) {
+      const now = event.timeStamp;
+      const dx = event.clientX - drag.lastX;
+      const dy = event.clientY - drag.lastY;
+      const speed = Math.hypot(dx, dy) / Math.max(now - drag.lastTime, 1);
+      if (speed > 0.05) {
+        node.stretchAngle = Math.atan2(dy, dx);
+        targetStretchRef.current = Math.min(speed * 0.06, 0.22);
+      }
+      drag.lastX = event.clientX;
+      drag.lastY = event.clientY;
+      drag.lastTime = now;
+    }
   }
 
   function onPointerUp() {
@@ -206,6 +299,7 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
       y: members.reduce((sum, n) => sum + (n.y ?? 0), 0) / members.length,
     };
     draggingGroupRef.current = null;
+    setStates(null);
     applyAnchorsRef.current();
     simRef.current?.alphaTarget(0);
     suppressClickRef.current = drag.moved;
@@ -225,7 +319,7 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
       ref={containerRef}
       role="group"
       aria-label="Popularne wyszukiwania"
-      className={`relative w-full touch-none select-none ${className}`.trim()}
+      className={`group/bubbles relative w-full touch-none select-none ${className}`.trim()}
     >
       {items.map(({ label }, i) => (
         <button
@@ -239,8 +333,8 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
-          style={{ opacity: 0 }}
-          className="liquid-glass-chip absolute left-0 top-0 flex cursor-grab items-center justify-center rounded-full text-sm font-medium text-foreground sm:text-lg transition-[color,border-color,opacity] duration-300 will-change-transform hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:cursor-grabbing"
+          data-state="idle"
+          className="bubble liquid-glass-chip absolute left-0 top-0 flex cursor-grab items-center justify-center rounded-full text-xs font-medium text-foreground opacity-0 will-change-transform group-data-[ready=true]/bubbles:opacity-100 hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:cursor-grabbing sm:text-lg"
         >
           <span className="whitespace-nowrap">{label}</span>
         </button>
