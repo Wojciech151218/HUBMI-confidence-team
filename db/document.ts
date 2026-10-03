@@ -15,6 +15,9 @@ export class Document {
   @PrimaryGeneratedColumn()
   id!: number;
 
+  @Column({ type: "text", nullable: true })
+  title!: string | null;
+
   @Column({ type: "text" })
   body!: string;
 
