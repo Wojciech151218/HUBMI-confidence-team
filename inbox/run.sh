@@ -1,6 +1,40 @@
 #!/usr/bin/env bash
 cd "$(dirname "$0")"
 
+# 0) usuń znaki diakrytyczne z nazw wszystkich plików pdf/zip/docx
+#    (także tych już przetworzonych w docs/ czy w rozpakowanych folderach).
+#    Robi to python3, usuwając z nazwy wszystkie bajty >= 0x80 — działa
+#    niezależnie od tego, czy nazwa jest w UTF-8, CP852/CP1250, czy już
+#    „zepsuta” (mojibake) po rozpakowaniu przez unzip.
+remove_diacritics() {
+python3 - <<'PY'
+import os, sys
+
+EXTS = ('.pdf', '.zip', '.docx')
+
+changed = 0
+for dirpath, dirnames, filenames in os.walk('.'):
+    dirnames[:] = [d for d in dirnames if d != '.git']
+    for fn in filenames:
+        if not fn.lower().endswith(EXTS):
+            continue
+        raw = fn.encode('utf-8', 'surrogateescape')
+        clean = raw.decode('ascii', 'ignore')
+        if clean == fn:
+            continue
+        src = os.path.join(dirpath, fn)
+        dst = os.path.join(dirpath, clean)
+        if os.path.lexists(dst):
+            print('pomijam (kolizja): %s' % src, file=sys.stderr)
+            continue
+        os.rename(src, dst)
+        changed += 1
+print('przemianowano %d plików' % changed)
+PY
+}
+
+remove_diacritics
+
 # 1) rozpakuj każdy zip do folderu o tej samej nazwie
 for z in *.zip; do
   [ -e "$z" ] || continue
@@ -8,6 +42,8 @@ for z in *.zip; do
   [ -e "$d" ] && continue
   unzip -q "$z" -d "$d"
 done
+
+remove_diacritics
 
 # 2) każdy pdf/docx do własnego folderu w docs/
 #    nazwa = ścieżka względna bez powtórzonych segmentów, np.

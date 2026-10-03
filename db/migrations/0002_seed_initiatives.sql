@@ -658,3 +658,21 @@ WHERE NOT EXISTS (
       AND tags = ARRAY['edukacja','gra edukacyjna','innowacja społeczna','edukacja zdrowotna']::text[]
 );
 
+INSERT INTO initiatives (title, url, tags)
+SELECT 'Pudełko do gry edukacyjnej – elementy do druku', NULL, ARRAY['edukacja','gra edukacyjna','innowacja społeczna','dokumenty']::text[]
+WHERE NOT EXISTS (
+    SELECT 1 FROM initiatives
+    WHERE title = 'Pudełko do gry edukacyjnej – elementy do druku'
+      AND url IS NOT DISTINCT FROM NULL
+      AND tags = ARRAY['edukacja','gra edukacyjna','innowacja społeczna','dokumenty']::text[]
+);
+
+INSERT INTO initiatives (title, url, tags)
+SELECT 'Naklejki na kostkę 12 mm – załączniki do finalnego modelu', NULL, ARRAY['innowacja społeczna','edukacja','dokumenty','pomoc rzeczowa']::text[]
+WHERE NOT EXISTS (
+    SELECT 1 FROM initiatives
+    WHERE title = 'Naklejki na kostkę 12 mm – załączniki do finalnego modelu'
+      AND url IS NOT DISTINCT FROM NULL
+      AND tags = ARRAY['innowacja społeczna','edukacja','dokumenty','pomoc rzeczowa']::text[]
+);
+
