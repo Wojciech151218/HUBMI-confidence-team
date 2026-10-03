@@ -13,6 +13,7 @@ Usage:
 
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.error
@@ -32,10 +33,9 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_EMBED_URL = os.environ.get("OPENAI_EMBED_URL", "https://api.openai.com/v1/embeddings")
 EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
 EMBEDDING_DIMENSIONS = int(os.environ.get("EMBEDDING_DIMENSIONS", "1536"))
-# text-embedding-3-small caps input at 8192 tokens. Some pdftotext -layout
-# markdown tokenizes very densely (layout spacing), so truncate conservatively
-# and embed only the beginning of the document. The full text is always stored
-# in `body`.
+# Safety cap only: embeddings are built from the title + first few sentences
+# (see embedding_input), so this limit is normally never reached. It guards
+# against an unexpectedly long sentence blowing past the model's 8192-token cap.
 MAX_EMBED_CHARS = int(os.environ.get("MAX_EMBED_CHARS", "8000"))
 
 # Seed migration file rewritten from the DB by sync_migration() at the end of a
@@ -115,6 +115,36 @@ def category_id(name: str) -> int:
     )
     out = psql(f"SELECT id FROM categories WHERE name = {sql_literal(clean)};")
     return int(out.strip())
+
+
+def clean_body(text: str) -> str:
+    """Drop control/format characters (soft hyphens, zero-width spaces, form
+    feeds) from the stored body, keeping printable text and line breaks."""
+    return "".join(ch if ch.isprintable() or ch in "\n\t" else " " for ch in text)
+
+
+def clean_prose(text: str) -> str:
+    """Normalize text into a single line of clean prose for embedding.
+
+    Removes control/format characters, strips markdown heading markers, and
+    collapses every whitespace run into one space.
+    """
+    text = "".join(ch if ch.isprintable() or ch in "\n\t" else " " for ch in text)
+    text = re.sub(r"(?m)^#{1,6}\s*", "", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def first_sentences(text: str, limit: int = 3) -> str:
+    """Return the first `limit` sentences of `text` as one line of clean prose."""
+    text = clean_prose(text)
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-ZĄĆĘŁŃÓŚŹŻ0-9])", text)
+    return " ".join(part.strip() for part in parts[:limit] if part.strip())
+
+
+def embedding_input(title: str, content: str) -> str:
+    """Title plus the first few sentences — enough signal for semantic search
+    without the layout noise of the full pdftotext dump."""
+    return f"{title.strip()}\n\n{first_sentences(content)}"
 
 
 def embed(text: str) -> list[float]:
@@ -373,6 +403,45 @@ def sync_migration() -> None:
         f.write("\n\n".join(sections) + "\n")
 
 
+def reembed() -> int:
+    """Re-embed every existing document using title + first sentences.
+
+    Cheap fix for search when embeddings were built from noisy full text: no
+    DeepSeek extraction, just re-embeds what is already in the DB and syncs the
+    seed migration afterwards.
+    """
+    if not OPENAI_API_KEY:
+        print("OPENAI_API_KEY is not set (needed for embeddings).", file=sys.stderr)
+        return 1
+
+    ensure_schema()
+
+    docs = json.loads(
+        psql(
+            "SELECT COALESCE(json_agg(json_build_object("
+            "'id', id, 'title', title, 'body', body) "
+            "ORDER BY id), '[]'::json) FROM documents;"
+        )
+    )
+
+    for doc in docs:
+        title = (doc.get("title") or "").strip()
+        try:
+            embedding = embed(embedding_input(title or "(brak tytułu)", doc["body"]))
+        except Exception as exc:  # noqa: BLE001
+            print(f"  error re-embedding document {doc['id']}: {exc}", file=sys.stderr)
+            continue
+        psql(
+            "UPDATE documents SET embedding = "
+            f"{embedding_literal(embedding)} WHERE id = {doc['id']};"
+        )
+        print(f"  re-embedded document {doc['id']}: {title[:60]!r}")
+
+    sync_migration()
+    print(f"migration seed synced -> {MIGRATION_FILE}")
+    return 0
+
+
 def main(paths: list[str]) -> int:
     if not DEEPSEEK_KEY:
         print("DEEPSEEK_KEY is not set.", file=sys.stderr)
@@ -406,7 +475,7 @@ def main(paths: list[str]) -> int:
         print(f"extracting {safe(path)} ...")
 
         try:
-            content = read_text(path)
+            content = clean_body(read_text(path))
             result = extract(content, existing_categories())
         except Exception as exc:  # noqa: BLE001 — one bad doc must not kill the batch
             print(f"  error extracting {safe(path)}: {exc}", file=sys.stderr)
@@ -421,7 +490,7 @@ def main(paths: list[str]) -> int:
             continue
 
         try:
-            embedding = embed(f"{title}\n\n{content}")
+            embedding = embed(embedding_input(title, content))
             document_id = insert_document(title, content, url, embedding)
         except Exception as exc:  # noqa: BLE001
             print(f"  error inserting {safe(path)}: {exc}", file=sys.stderr)
@@ -459,4 +528,7 @@ def main(paths: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    args = sys.argv[1:]
+    if args == ["--reembed"]:
+        raise SystemExit(reembed())
+    raise SystemExit(main(args))
