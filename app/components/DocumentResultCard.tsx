@@ -19,8 +19,7 @@ export type ResultCardHit = ReaderDocument & {
 };
 
 const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
-const visibleFacts = 3;
-const visibleCategories = 3;
+const visibleCategories = 8;
 
 export function DocumentResultCard({ hit, index }: { hit: ResultCardHit; index: number }) {
   const [open, setOpen] = useState(false);
@@ -28,7 +27,7 @@ export function DocumentResultCard({ hit, index }: { hit: ResultCardHit; index: 
   const match = Math.round(Math.max(0, Math.min(1, hit.similarity)) * 100);
   const createdAt = new Date(hit.createdAt);
   const title = hit.title ?? "Dokument bez tytułu";
-  const { summary, facts } = hit.preview;
+  const { summary } = hit.preview;
   const shownCategories = hit.categories.slice(0, visibleCategories);
   const hiddenCategories = hit.categories.slice(visibleCategories);
 
@@ -66,42 +65,28 @@ export function DocumentResultCard({ hit, index }: { hit: ResultCardHit; index: 
           </p>
         )}
 
-        {facts.length > 0 && (
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-2.5 rounded-xl border border-hairline bg-white/45 px-4 py-3 sm:grid-cols-3">
-            {facts.slice(0, visibleFacts).map((fact) => (
-              <div key={fact.label} className="min-w-0">
-                <dt className="text-[11px] font-medium uppercase tracking-wider text-muted">
-                  {fact.label}
-                </dt>
-                <dd className="truncate font-secondary text-sm font-semibold text-foreground" title={fact.value}>
-                  {fact.value}
-                </dd>
-              </div>
+        {hit.categories.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5" aria-label="Kategorie">
+            {shownCategories.map((name) => (
+              <li
+                key={name}
+                className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent"
+              >
+                {name}
+              </li>
             ))}
-          </dl>
+            {hiddenCategories.length > 0 && (
+              <li
+                className="rounded-full border border-hairline px-2 py-0.5 text-xs font-medium text-muted"
+                title={hiddenCategories.join(", ")}
+              >
+                +{hiddenCategories.length}
+              </li>
+            )}
+          </ul>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
-          {hit.categories.length > 0 && (
-            <ul className="flex flex-wrap gap-1.5" aria-label="Kategorie">
-              {shownCategories.map((name) => (
-                <li
-                  key={name}
-                  className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent"
-                >
-                  {name}
-                </li>
-              ))}
-              {hiddenCategories.length > 0 && (
-                <li
-                  className="rounded-full border border-hairline px-2 py-0.5 text-xs font-medium text-muted"
-                  title={hiddenCategories.join(", ")}
-                >
-                  +{hiddenCategories.length}
-                </li>
-              )}
-            </ul>
-          )}
+        <div className="flex items-center gap-4 text-sm text-muted">
           <time dateTime={createdAt.toISOString()}>{dateFormat.format(createdAt)}</time>
           <span className="ml-auto flex items-center gap-4">
             {hit.minioUrl && (

@@ -2,9 +2,10 @@ import "reflect-metadata";
 import { DataSource } from "typeorm";
 import { Category } from "../db/category";
 import { Document } from "../db/document";
+import { Initiative } from "../db/initiative";
 import { User } from "../db/user";
 
-const entities = [Document, Category, User];
+const entities = [Document, Category, User, Initiative];
 
 const globalForDataSource = globalThis as unknown as {
   dataSource?: DataSource;
