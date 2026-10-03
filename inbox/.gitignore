@@ -8,3 +8,7 @@
 docs/
 # markdown/
 processed/
+
+# python
+__pycache__/
+*.pyc
