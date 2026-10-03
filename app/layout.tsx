@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Open_Sans, Ubuntu } from "next/font/google";
+import { UserProvider } from "@/app/_components/user-context";
 import "./globals.css";
 
 const ubuntu = Ubuntu({
@@ -25,7 +26,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="pl"
       className={`${ubuntu.variable} ${openSans.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <UserProvider>{children}</UserProvider>
+      </body>
     </html>
   );
 }
