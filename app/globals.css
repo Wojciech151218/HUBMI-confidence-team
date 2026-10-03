@@ -10,9 +10,6 @@
   --accent-hover: #174fb0;
   --accent-soft: rgb(29 95 209 / 0.1);
   --hairline: rgb(15 23 42 / 0.08);
-  --blob-a: rgb(29 95 209 / 0.14);
-  --blob-b: rgb(56 152 236 / 0.12);
-  --blob-c: rgb(125 170 255 / 0.12);
 }
 
 @theme inline {
@@ -31,46 +28,6 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
-}
-
-/* Soft blue blobs behind the content, giving the glass something to refract. */
-.backdrop-blobs {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.backdrop-blobs span {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(60px);
-  will-change: transform;
-}
-
-.backdrop-blobs span:nth-child(1) {
-  top: 18%;
-  left: 12%;
-  width: 34rem;
-  height: 34rem;
-  background: radial-gradient(circle, var(--blob-a), transparent 65%);
-}
-
-.backdrop-blobs span:nth-child(2) {
-  top: 30%;
-  right: 8%;
-  width: 28rem;
-  height: 28rem;
-  background: radial-gradient(circle, var(--blob-b), transparent 65%);
-}
-
-.backdrop-blobs span:nth-child(3) {
-  bottom: -6%;
-  left: 38%;
-  width: 30rem;
-  height: 30rem;
-  background: radial-gradient(circle, var(--blob-c), transparent 65%);
 }
 
 /*
@@ -136,31 +93,10 @@ body {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .backdrop-blobs span:nth-child(1) {
-    animation: drift 22s ease-in-out infinite alternate;
-  }
-
-  .backdrop-blobs span:nth-child(2) {
-    animation: drift 26s ease-in-out infinite alternate-reverse;
-  }
-
-  .backdrop-blobs span:nth-child(3) {
-    animation: drift 30s ease-in-out infinite alternate;
-  }
-
   .fade-up {
     opacity: 0;
     animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     animation-delay: calc(var(--i, 0) * 90ms);
-  }
-}
-
-@keyframes drift {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  to {
-    transform: translate3d(4rem, -3rem, 0) scale(1.12);
   }
 }
 
