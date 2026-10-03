@@ -1,10 +1,19 @@
 "use client";
 
 import { MagnifyingGlass } from "@phosphor-icons/react";
-import Link from "next/link";
 import { useState } from "react";
+import { SuggestionBubbles } from "./SuggestionBubbles";
 
-const SUGGESTIONS = ["Dotacje", "Wydarzenia", "Inkubatory", "Partnerzy"];
+const SUGGESTIONS = [
+  "Dotacje",
+  "Wydarzenia",
+  "Inkubatory",
+  "Partnerzy",
+  "Startupy",
+  "Szkolenia",
+  "Mentoring",
+  "Badania i rozwój",
+];
 
 type SearchBarProps = {
   defaultValue?: string;
@@ -48,18 +57,7 @@ export function SearchBar({ defaultValue = "" }: SearchBarProps) {
         </div>
       </form>
 
-      <ul className="flex flex-wrap justify-center gap-2" aria-label="Popularne wyszukiwania">
-        {SUGGESTIONS.map((suggestion) => (
-          <li key={suggestion}>
-            <Link
-              href={`/search?q=${encodeURIComponent(suggestion)}`}
-              className="liquid-glass-chip inline-block rounded-full px-4 py-1.5 text-sm font-medium text-foreground transition-colors duration-300 hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              {suggestion}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <SuggestionBubbles labels={SUGGESTIONS} />
     </div>
   );
 }
