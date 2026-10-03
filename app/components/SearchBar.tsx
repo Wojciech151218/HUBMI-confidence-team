@@ -37,7 +37,7 @@ export function SearchBar({ defaultValue = "" }: SearchBarProps) {
           <button
             type="submit"
             disabled={isEmpty}
-            className="shrink-0 rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition-[transform,background-color,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-accent-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:px-7 sm:text-base"
+            className="shimmer-gradient shrink-0 rounded-full px-5 py-3 text-sm font-medium text-white transition-[transform,filter,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:px-7 sm:text-base"
           >
             Szukaj
           </button>

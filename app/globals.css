@@ -90,17 +90,19 @@ body {
 .liquid-bubble {
   isolation: isolate;
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 0.7);
+  /* Denser fill, blue rim and deeper drop shadow so bubbles hold up on the light gradient. */
+  border: 1px solid rgb(29 95 209 / 0.28);
   background:
-    radial-gradient(120% 120% at 30% 20%, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.12) 60%),
-    rgb(255 255 255 / 0.18);
+    radial-gradient(120% 120% at 30% 20%, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0.5) 60%),
+    rgb(255 255 255 / 0.45);
   backdrop-filter: blur(28px) saturate(210%) brightness(1.06);
   -webkit-backdrop-filter: blur(28px) saturate(210%) brightness(1.06);
   box-shadow:
-    inset 0 2px 6px rgb(255 255 255 / 0.9),
-    inset 0 -12px 22px -6px rgb(29 95 209 / 0.16),
-    inset 0 0 0 1px rgb(255 255 255 / 0.25),
-    0 14px 32px -12px rgb(29 95 209 / 0.32);
+    inset 0 2px 6px rgb(255 255 255 / 0.95),
+    inset 0 -12px 22px -6px rgb(29 95 209 / 0.24),
+    inset 0 0 0 1px rgb(255 255 255 / 0.4),
+    0 4px 10px -4px rgb(11 21 48 / 0.18),
+    0 18px 36px -12px rgb(29 95 209 / 0.45);
   text-shadow: 0 1px 8px rgb(255 255 255 / 0.85);
 }
 
@@ -127,6 +129,52 @@ body {
   background: radial-gradient(closest-side, rgb(255 255 255 / 0.45), rgb(255 255 255 / 0));
   filter: blur(3px);
   pointer-events: none;
+}
+
+/* Hero slogan: deep, saturated ink so it reads over the animated gradient. */
+.slogan {
+  color: #0b1530;
+  text-wrap: balance;
+  /* Soft blue shade under the glyphs; drop-shadow so it also follows the gradient-clipped accent words. */
+  filter: drop-shadow(0 10px 18px rgb(14 58 148 / 0.35));
+}
+
+/* Animated blue gradient shared by the slogan accent and the search button. */
+.shimmer-gradient {
+  background-image: linear-gradient(
+    100deg,
+    var(--accent) 0%,
+    #0e3a94 35%,
+    #4f8df0 50%,
+    #0e3a94 65%,
+    var(--accent) 100%
+  );
+  background-size: 250% 100%;
+  background-position: 100% 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shimmer-gradient {
+    animation: shimmer 6s ease-in-out infinite alternate;
+  }
+}
+
+.slogan-accent {
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Light sweep across the gradient, resting briefly at each end. */
+@keyframes shimmer {
+  0%,
+  15% {
+    background-position: 100% 50%;
+  }
+  85%,
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* Drag states for the suggestion bubbles; scale and stretch are animated in JS. */

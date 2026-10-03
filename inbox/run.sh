@@ -82,12 +82,14 @@ for d in docs/*/; do
 done
 
 # 4) For each markdown file, ask DeepSeek to extract title, url and tags
-#    (categories + subcategories) and insert them into `initiatives`.
+#    (categories + subcategories), then store them in the canonical `documents` /
+#    `categories` schema (matching db/document.ts) with an OpenAI embedding.
 #    Existing categories are passed to DeepSeek so it reuses them instead of
 #    inventing new wording. Already-processed files (processed/*.json) are skipped;
 #    re-run with FORCE=1 to reprocess.
 export DEEPSEEK_URL="${DEEPSEEK_URL:-https://api.deepseek.com/anthropic}"
 export DEEPSEEK_KEY="${DEEPSEEK_KEY:?DEEPSEEK_KEY is not set}"
 export DEEPSEEK_MODEL="${DEEPSEEK_MODEL:-deepseek-chat}"
+export OPENAI_API_KEY="${OPENAI_API_KEY:-}"
 
 python3 ingest.py markdown/*.md

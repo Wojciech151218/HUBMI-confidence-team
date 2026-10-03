@@ -6,21 +6,13 @@ export function PageShell({ children }: { children: React.ReactNode }) {
     <div className="relative flex min-h-[100dvh] flex-1 flex-col">
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
         <Grainient
-          color1="#E5007E"
-          color2="#c8c7c7"
-          color3="#84CC16"
-          blendAngle={-16}
-          colorBalance={0.08}
-          warpStrength={2.75}
-          noiseScale={1.3}
-          saturation={0.8}
-          zoom={0.45}
-          warpFrequency={7}
-          warpSpeed={4.3}
+          color1="#94C01F"
+          color2="#eaeaea"
+          color3="#4464AC"
+          blendAngle={-36}
+          warpFrequency={9}
+          timeSpeed={0.4}
           grainAmount={0.02}
-          contrast={0.8}
-          timeSpeed={0.75}
-          rotationAmount={590}
         />
       </div>
       {children}

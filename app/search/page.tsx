@@ -94,6 +94,11 @@ function ResultCard({ hit }: { hit: DocumentHit }) {
 
   return (
     <li className="liquid-glass-chip flex flex-col gap-3 rounded-2xl p-5">
+      {hit.title && (
+        <h2 className="text-base font-bold tracking-tight text-foreground">
+          {hit.title}
+        </h2>
+      )}
       <p className="line-clamp-4 font-secondary leading-relaxed text-foreground">
         {hit.body}
       </p>

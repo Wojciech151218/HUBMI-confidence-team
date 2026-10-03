@@ -17,6 +17,7 @@ export type DocumentSearchOptions = {
 
 export type DocumentHit = {
   id: number;
+  title: string | null;
   body: string;
   minioUrl: string | null;
   categories: string[];
@@ -37,6 +38,7 @@ export async function searchDocuments({
     .createQueryBuilder("document")
     .select([
       "document.id",
+      "document.title",
       "document.body",
       "document.minioUrl",
       "document.createdAt",
@@ -86,6 +88,7 @@ export async function searchDocuments({
 
   return entities.map((document, index) => ({
     id: document.id,
+    title: document.title,
     body: document.body,
     minioUrl: document.minioUrl,
     categories: categoryNamesById.get(document.id) ?? [],
