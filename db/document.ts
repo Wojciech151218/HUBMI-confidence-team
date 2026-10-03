@@ -27,13 +27,16 @@ function fromVectorLiteral(value: string | null): number[] | null {
     .map(Number);
 }
 
-@Entity({ name: "documents" })
+@Entity({ name: "documents", synchronize: false })
 export class Document {
   @PrimaryGeneratedColumn()
   id!: number;
 
   @Column({ type: "text" })
   body!: string;
+
+  @Column({ type: "text", name: "minio_url", nullable: true })
+  minioUrl!: string | null;
 
   @Column({
     type: "text",

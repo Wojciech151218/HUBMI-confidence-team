@@ -1,7 +1,8 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import { embeddingDimensions } from "./embedding";
-import { Document } from "./document";
+import { Document } from "../db/document";
+import { User } from "../db/user";
 
 const globalForDataSource = globalThis as unknown as {
   dataSource?: DataSource;
@@ -12,8 +13,8 @@ export const AppDataSource =
   new DataSource({
     type: "postgres",
     url: process.env.DATABASE_URL,
-    entities: [Document],
-    synchronize: false,
+    entities: [Document, User],
+    synchronize: true,
   });
 
 if (process.env.NODE_ENV !== "production") {
@@ -26,9 +27,13 @@ async function ensureSchema(dataSource: DataSource) {
     CREATE TABLE IF NOT EXISTS documents (
       id SERIAL PRIMARY KEY,
       body text NOT NULL,
+      minio_url text,
       embedding vector(${embeddingDimensions}),
       created_at timestamptz NOT NULL DEFAULT now()
     )
+  `);
+  await dataSource.query(`
+    ALTER TABLE documents ADD COLUMN IF NOT EXISTS minio_url text
   `);
 }
 
