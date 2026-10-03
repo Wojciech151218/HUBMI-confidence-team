@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { getDataSource } from "@/lib/data-source";
 import { Document } from "@/lib/document";
-import { createEmbedding } from "@/lib/openai";
+import { createEmbedding, isOpenAIConfigured } from "@/lib/openai";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,7 @@ export default async function Home() {
   const documents = await dataSource.getRepository(Document).find({
     order: { id: "ASC" },
   });
-  const openAIConfigured = Boolean(process.env.OPENAI_API_KEY);
+  const openAIConfigured = isOpenAIConfigured();
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-16">
@@ -39,32 +39,27 @@ export default async function Home() {
           HUBMI confidence team
         </h1>
         <p className="text-zinc-600 dark:text-zinc-400">
-          pgvector {extension?.extversion ?? "missing"} · OpenAI{" "}
-          {openAIConfigured ? "configured" : "not configured"}
+          pgvector {extension?.extversion ?? "missing"} ·{" "}
+          {openAIConfigured
+            ? "OpenAI embeddings"
+            : "mock embeddings (set OPENAI_API_KEY for real vectors)"}
         </p>
       </div>
 
-      {openAIConfigured ? (
-        <form action={saveDocument} className="flex flex-col gap-3 sm:flex-row">
-          <input
-            name="body"
-            required
-            placeholder="Text to embed"
-            className="h-11 flex-1 rounded-full border border-black/10 px-4 dark:border-white/15"
-          />
-          <button
-            type="submit"
-            className="h-11 rounded-full bg-foreground px-5 text-background"
-          >
-            Embed and save
-          </button>
-        </form>
-      ) : (
-        <p className="text-zinc-600 dark:text-zinc-400">
-          Set OPENAI_API_KEY in .env to create embeddings with the OpenAI
-          TypeScript client.
-        </p>
-      )}
+      <form action={saveDocument} className="flex flex-col gap-3 sm:flex-row">
+        <input
+          name="body"
+          required
+          placeholder="Text to embed"
+          className="h-11 flex-1 rounded-full border border-black/10 px-4 dark:border-white/15"
+        />
+        <button
+          type="submit"
+          className="h-11 rounded-full bg-foreground px-5 text-background"
+        >
+          Embed and save
+        </button>
+      </form>
 
       <ul className="flex flex-col gap-3">
         {documents.length === 0 ? (
