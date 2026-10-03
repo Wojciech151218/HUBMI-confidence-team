@@ -15,7 +15,7 @@ Path alias: `@/*` → project root.
 
 1. **Next.js** — App Router pages under `app/`, Route Handlers under `app/api/**/route.ts` when appropriate, Server Actions for mutations. Server Components by default.
 2. **TypeORM** — All database access via `getDataSource()` from `@/lib/data-source`. Entities live in `lib/`. Register new entities on `AppDataSource`. Postgres includes **pgvector** for embeddings.
-3. **OpenAI** — `@/lib/openai` TypeScript client; env `OPENAI_API_KEY` (see local `.env`, not committed).
+3. **Embeddings** — `@/lib/embedding` (`EmbeddingProvider`, `createEmbedding`); OpenAI when `OPENAI_API_KEY` is set, otherwise mock (see local `.env`, not committed).
 
 Do not add parallel DB layers (raw `pg` pools, Prisma, etc.) unless the user explicitly asks.
 

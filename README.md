@@ -15,7 +15,7 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hubmi
 OPENAI_API_KEY=
 ```
 
-`OPENAI_API_KEY` is read by `lib/openai.ts`. Leave it empty until you want to create embeddings. Inside Compose, `DATABASE_URL` is overridden so the app reaches Postgres at the `db` service.
+`OPENAI_API_KEY` selects the OpenAI backend in `lib/embedding.ts`. Leave it empty to use mock embeddings until you want real vectors. Inside Compose, `DATABASE_URL` is overridden so the app reaches Postgres at the `db` service.
 
 ## Run
 
