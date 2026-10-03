@@ -1,7 +1,32 @@
+import { PageShell } from "./components/PageShell";
+import { SearchBar } from "./components/SearchBar";
+
 export default function Home() {
   return (
-    <main className="flex flex-1 items-center justify-center px-6">
-      <h1 className="text-3xl font-semibold tracking-tight">Confidence team</h1>
-    </main>
+    <PageShell>
+      <main className="flex flex-1 items-center justify-center px-4 pb-16 pt-12 sm:px-6 md:pt-16">
+        <div className="flex w-full max-w-2xl flex-col items-center gap-10 text-center">
+          <div className="flex flex-col items-center gap-5">
+            <h1
+              className="fade-up text-4xl font-semibold leading-[1.05] tracking-tighter md:text-6xl"
+              style={{ "--i": 0 } as React.CSSProperties}
+            >
+              Odkryj innowacje{" "}
+              <span className="whitespace-nowrap text-accent">w Małopolsce</span>
+            </h1>
+            <p
+              className="fade-up max-w-[60ch] text-base leading-relaxed text-muted md:text-lg"
+              style={{ "--i": 1 } as React.CSSProperties}
+            >
+              Wyszukuj programy wsparcia, wydarzenia i partnerów, którzy rozwijają
+              innowacyjną Małopolskę.
+            </p>
+          </div>
+          <div className="fade-up w-full" style={{ "--i": 2 } as React.CSSProperties}>
+            <SearchBar />
+          </div>
+        </div>
+      </main>
+    </PageShell>
   );
 }

@@ -4,23 +4,24 @@ import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
 });
 
 export const metadata: Metadata = {
-  title: "HUBMI confidence team",
-  description: "Next.js, PostgreSQL, pgvector, and OpenAI",
+  title: "Hub Małopolskich Innowacji",
+  description:
+    "Wyszukuj programy wsparcia, wydarzenia i partnerów rozwijających innowacyjną Małopolskę.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
+      lang="pl"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
