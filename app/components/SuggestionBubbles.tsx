@@ -113,8 +113,8 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
     let height = container.clientHeight;
 
     const compact = width < 640;
-    const minDiameter = compact ? 72 : 136;
-    const labelPadding = compact ? 18 : 56;
+    // Every bubble shares one size; long labels wrap inside it.
+    const diameter = compact ? 92 : 136;
     const gap = compact ? 4 : 8;
 
     sizeRef.current = { width, height };
@@ -126,8 +126,6 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
 
     const nodes: BubbleNode[] = buttonRefs.current.map((button, i) => {
       const group = items[i].group;
-      const label = button?.firstElementChild as HTMLElement | null;
-      const diameter = Math.max((label?.offsetWidth ?? 0) + labelPadding, minDiameter);
       if (button) {
         button.style.width = `${diameter}px`;
         button.style.height = `${diameter}px`;
@@ -356,7 +354,7 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
       suppressClickRef.current = false;
       return;
     }
-    router.push(`/search?q=${encodeURIComponent(label)}`);
+    router.push(`/search?category=${encodeURIComponent(label)}`);
   }
 
   return (
@@ -379,9 +377,9 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           data-state="idle"
-          className="bubble liquid-bubble absolute left-0 top-0 flex cursor-grab items-center justify-center rounded-full text-xs font-bold text-foreground opacity-0 will-change-transform group-data-[ready=true]/bubbles:opacity-100 hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:cursor-grabbing sm:text-lg"
+          className="bubble liquid-bubble absolute left-0 top-0 flex cursor-grab items-center justify-center rounded-full px-2.5 text-[11px] font-bold leading-tight text-foreground opacity-0 will-change-transform group-data-[ready=true]/bubbles:opacity-100 hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:cursor-grabbing sm:px-3 sm:text-sm"
         >
-          <span className="relative z-[1] whitespace-nowrap">{label}</span>
+          <span className="relative z-[1] line-clamp-3 text-center break-words hyphens-auto">{label}</span>
         </button>
       ))}
     </div>

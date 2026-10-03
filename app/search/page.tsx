@@ -35,8 +35,10 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
   const { q, category } = await searchParams;
   const query = (Array.isArray(q) ? q[0] : q)?.trim() ?? "";
   const categories = parseCategories(category);
-  const { results, failed } = query
-    ? await runSearch(query, categories)
+  // Browsing a category without a query: rank its documents by similarity to the category names.
+  const searchText = query || categories.join(", ");
+  const { results, failed } = searchText
+    ? await runSearch(searchText, categories)
     : { results: [], failed: false };
 
   return (
@@ -47,7 +49,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
         </div>
         <SearchBar key={query} defaultValue={query} />
 
-        {!query ? (
+        {!searchText ? (
           <StatusMessage
             title="Zacznij wyszukiwanie"
             body="Wpisz hasło powyżej lub wybierz jedną z popularnych kategorii."
@@ -59,13 +61,13 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
           />
         ) : results.length === 0 ? (
           <StatusMessage
-            title={`Brak wyników dla „${query}”`}
+            title={`Brak wyników dla „${searchText}”`}
             body="Spróbuj innego hasła lub bardziej ogólnego sformułowania."
           />
         ) : (
           <section className="flex flex-col gap-4" aria-label="Wyniki wyszukiwania">
             <h1 className="text-xl font-bold tracking-tight">
-              Wyniki dla „{query}”
+              Wyniki dla „{searchText}”
             </h1>
             <ol className="flex flex-col gap-3">
               {results.map((hit) => (

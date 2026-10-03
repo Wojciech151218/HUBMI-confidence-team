@@ -2,14 +2,23 @@ import { Logo } from "./components/Logo";
 import { PageShell } from "./components/PageShell";
 import { SearchBar } from "./components/SearchBar";
 import { SuggestionBubbles, type SuggestionGroup } from "./components/SuggestionBubbles";
+import { getSuggestionGroups } from "@/lib/suggestion-groups";
 
-const SUGGESTION_GROUPS: SuggestionGroup[] = [
-  { topic: "Finansowanie", labels: ["Dotacje", "Badania i rozwój"] },
-  { topic: "Wiedza", labels: ["Szkolenia", "Mentoring", "Wydarzenia"] },
-  { topic: "Ekosystem", labels: ["Startupy", "Inkubatory", "Partnerzy"] },
-];
+// Categories change with the data, so render per request instead of at build time.
+export const dynamic = "force-dynamic";
 
-export default function Home() {
+async function loadSuggestionGroups(): Promise<SuggestionGroup[]> {
+  try {
+    return await getSuggestionGroups();
+  } catch (error) {
+    console.error("home: getSuggestionGroups failed", error);
+    return [];
+  }
+}
+
+export default async function Home() {
+  const suggestionGroups = await loadSuggestionGroups();
+
   return (
     <PageShell>
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center gap-6 px-4 pt-10 text-center sm:px-6 md:pt-12">
@@ -24,7 +33,7 @@ export default function Home() {
           <span className="shimmer-gradient slogan-accent whitespace-nowrap">w Małopolsce</span>
         </h1>
         <SuggestionBubbles
-          groups={SUGGESTION_GROUPS}
+          groups={suggestionGroups}
           className="fade-up min-h-[340px] flex-1 sm:min-h-[420px]"
         />
       </main>
