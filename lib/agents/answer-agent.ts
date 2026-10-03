@@ -29,7 +29,7 @@ function mockAnswer(sources: DocumentHit[]): string {
 export const answerAgent: Agent = {
   name: "answer",
   description:
-    "Answers a specific question (how, why, what, who) in prose, grounded in the documents. Pick it when the user asks something that needs an explanation or summary.",
+    "Odpowiada na konkretne pytanie (jak, dlaczego, co, kto) prozą, na podstawie dokumentów. Wybierz go, gdy użytkownik pyta o coś, co wymaga wyjaśnienia albo podsumowania.",
   async run({ message, query, categories }) {
     const sources = await searchDocuments({ query, categories, limit: sourceLimit });
     const client = getOpenAIClient();

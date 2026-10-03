@@ -1,20 +1,36 @@
-import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
+import {
+  AIMessage,
+  type BaseMessage,
+  HumanMessage,
+  RemoveMessage,
+  SystemMessage,
+} from "@langchain/core/messages";
 import { Annotation, END, MessagesAnnotation, START, StateGraph } from "@langchain/langgraph";
 import { ToolNode, toolsCondition } from "@langchain/langgraph/prebuilt";
 import { ChatOpenAI } from "@langchain/openai";
-import { searchDocuments } from "@/lib/document-search";
+import { listCategoryNames, searchDocuments } from "@/lib/document-search";
 import { chatModel } from "@/lib/openai";
 import { getCheckpointer } from "./checkpointer";
-import { searchDocumentsTool } from "./search-tool";
+import { isAboutService, isOffTopicGeneralQuestion, offTopicRefusal } from "./guardrails";
+import { searchDocumentsTool, searchQueryInstructions, searchToolDescription } from "./search-tool";
 
 const mockSourceLimit = 5;
 const mockExcerptChars = 200;
+export const agentRecursionLimit = 10;
 
-const systemPrompt = `Jesteś asystentem Hubu Małopolskich Innowacji, wyszukiwarki modeli innowacji społecznych (głównie po polsku).
-Zawsze wywołaj search_documents, zanim odpowiesz na pytanie o dokumenty, programy lub innowacje.
+function systemPrompt(categoryNames: string[]): string {
+  return `Jesteś asystentem Hubu Małopolskich Innowacji. Twoim zadaniem jest pomagać w materiałach z bazy: innowacjach społecznych, projektach i formularzach związanych z Małopolską. Nie jesteś ogólnym chatbotem.
+
+Odpowiadaj bez search_documents, gdy pytanie dotyczy samej usługi (czym jest hub, jak działa czat, powitanie) albo wykracza poza tę bazę. Wtedy wyjaśnij zakres prostymi słowami albo grzecznie odmów. Nie uzupełniaj braków ogólną wiedzą.
+
+Gdy pytanie dotyczy materiału z bazy, najpierw wywołaj search_documents, potem odpowiedz na podstawie wyniku. Nie odkładaj wyszukiwania. Nie proponuj, że poszukasz później. Jeśli temat do bazy nie pasuje, nie wywołuj narzędzia i nie zgaduj.
+
+${searchQueryInstructions(categoryNames)}
+
 Odpowiadaj w języku użytkownika.
 Po wyniku narzędzia napisz krótkie podsumowanie najbardziej trafnego dokumentu lub dokumentów: 2–4 zdania, bez eseju.
-Jeśli nic przydatnego nie znaleziono, powiedz to wprost, zamiast zgadywać.`;
+Jeśli nic przydatnego nie znaleziono, powiedz to wprost.`;
+}
 
 export const AgentState = Annotation.Root({
   ...MessagesAnnotation.spec,
@@ -48,6 +64,19 @@ function messageText(content: unknown): string {
     .join("");
 }
 
+function searchedSinceLastHuman(messages: typeof AgentState.State["messages"]): boolean {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const type = messages[index].getType();
+    if (type === "tool") {
+      return true;
+    }
+    if (type === "human") {
+      return false;
+    }
+  }
+  return false;
+}
+
 function lastHumanText(messages: typeof AgentState.State["messages"]): string {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     if (messages[index].getType() === "human") {
@@ -68,11 +97,19 @@ function mockSummary(bodies: string[]): string {
 }
 
 async function initialNode(state: typeof AgentState.State) {
-  const hasSystem = state.messages.some((message) => message.getType() === "system");
-  if (hasSystem) {
+  const categoryNames = await listCategoryNames();
+  const prompt = systemPrompt(categoryNames);
+  const system = state.messages.find((message) => message.getType() === "system");
+  if (system && messageText(system.content) === prompt) {
     return {};
   }
-  return { messages: [new SystemMessage(systemPrompt)] };
+
+  const messages: BaseMessage[] = [];
+  if (system?.id) {
+    messages.push(new RemoveMessage({ id: system.id }));
+  }
+  messages.push(new SystemMessage(prompt));
+  return { messages };
 }
 
 async function messageNode(state: typeof AgentState.State) {
@@ -87,8 +124,12 @@ async function messageNode(state: typeof AgentState.State) {
 }
 
 async function llmNode(state: typeof AgentState.State) {
+  const query = lastHumanText(state.messages);
+  if (isOffTopicGeneralQuestion(query)) {
+    return { messages: [new AIMessage(offTopicRefusal(query))] };
+  }
+
   if (!process.env.OPENAI_API_KEY) {
-    const query = lastHumanText(state.messages);
     const hits = query
       ? await searchDocuments({
           query,
@@ -99,10 +140,18 @@ async function llmNode(state: typeof AgentState.State) {
     return { messages: [new AIMessage(mockSummary(hits.map((hit) => hit.body)))] };
   }
 
+  const categoryNames = await listCategoryNames();
+  searchDocumentsTool.description = searchToolDescription(categoryNames);
+
+  const requireSearch = !isAboutService(query) && !searchedSinceLastHuman(state.messages);
   const model = new ChatOpenAI({
     model: chatModel,
     apiKey: process.env.OPENAI_API_KEY,
-  }).bindTools([searchDocumentsTool]);
+  }).bindTools([searchDocumentsTool], {
+    tool_choice: requireSearch
+      ? { type: "function", function: { name: "search_documents" } }
+      : "auto",
+  });
 
   const response = await model.invoke(state.messages);
   return { messages: [response] };
@@ -138,5 +187,5 @@ export async function getAgentGraph() {
 }
 
 export function threadConfig(threadId: string) {
-  return { configurable: { thread_id: threadId } };
+  return { configurable: { thread_id: threadId }, recursionLimit: agentRecursionLimit };
 }
