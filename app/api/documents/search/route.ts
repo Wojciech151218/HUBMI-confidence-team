@@ -1,18 +1,12 @@
 import { NextResponse } from "next/server";
-import { createEmbedding } from "@/lib/embedding";
+import { In } from "typeorm";
+import { Document } from "@/db/document";
 import { getDataSource } from "@/lib/data-source";
+import { createEmbedding } from "@/lib/embedding";
 
 const defaultLimit = 10;
 const maxLimit = 50;
-
-type SearchRow = {
-  id: number;
-  body: string;
-  minioUrl: string | null;
-  categories: string[] | null;
-  similarity: number;
-  createdAt: Date;
-};
+const distanceSql = "document.embedding <=> CAST(:embedding AS vector)";
 
 function parseCategories(searchParams: URLSearchParams): string[] {
   const names = searchParams
@@ -56,61 +50,72 @@ export async function GET(request: Request) {
   }
 
   const embedding = await createEmbedding(query);
-  const vector = `[${embedding.join(",")}]`;
-  const params: unknown[] = [vector];
-  const filters = ["d.embedding IS NOT NULL"];
+  const ds = await getDataSource();
+  const repo = ds.getRepository(Document);
+
+  const search = repo
+    .createQueryBuilder("document")
+    .select([
+      "document.id",
+      "document.body",
+      "document.minioUrl",
+      "document.createdAt",
+    ])
+    .where("document.embedding IS NOT NULL")
+    .addSelect(`1 - (${distanceSql})`, "similarity")
+    .orderBy(distanceSql, "ASC")
+    .setParameter("embedding", `[${embedding.join(",")}]`)
+    .limit(limit);
 
   if (categories.length > 0) {
-    params.push(categories);
-    filters.push(`EXISTS (
-      SELECT 1
-      FROM document_categories dc
-      INNER JOIN categories c ON c.id = dc.category_id
-      WHERE dc.document_id = d.id
-        AND lower(c.name) = ANY($${params.length})
-    )`);
+    search.andWhere((builder) => {
+      const match = builder
+        .subQuery()
+        .select("filtered.id")
+        .from(Document, "filtered")
+        .innerJoin("filtered.categories", "category")
+        .where("LOWER(category.name) IN (:...categoryNames)")
+        .getQuery();
+      return `document.id IN ${match}`;
+    });
+    search.setParameter("categoryNames", categories);
   }
 
-  params.push(limit);
+  const { entities, raw } = await search.getRawAndEntities();
+  const ids = entities.map((document) => document.id);
+  const withCategories =
+    ids.length === 0
+      ? []
+      : await repo.find({
+          where: { id: In(ids) },
+          relations: { categories: true },
+          select: {
+            id: true,
+            categories: { id: true, name: true },
+          },
+        });
 
-  const ds = await getDataSource();
-  const rows: SearchRow[] = await ds.query(
-    `
-      SELECT
-        d.id,
-        d.body,
-        d.minio_url AS "minioUrl",
-        d.created_at AS "createdAt",
-        1 - (d.embedding <=> $1::vector) AS similarity,
-        COALESCE(
-          (
-            SELECT json_agg(c.name ORDER BY c.name)
-            FROM document_categories dc
-            INNER JOIN categories c ON c.id = dc.category_id
-            WHERE dc.document_id = d.id
-          ),
-          '[]'::json
-        ) AS categories
-      FROM documents d
-      WHERE ${filters.join(" AND ")}
-      ORDER BY d.embedding <=> $1::vector
-      LIMIT $${params.length}
-    `,
-    params,
+  const categoryNamesById = new Map(
+    withCategories.map((document) => [
+      document.id,
+      document.categories
+        .map((category) => category.name)
+        .sort((left, right) => left.localeCompare(right)),
+    ]),
   );
 
-  console.log("documents GET search:", query, categories, rows.length);
+  console.log("documents GET search:", query, categories, entities.length);
 
   return NextResponse.json({
     query,
     categories,
-    results: rows.map((row) => ({
-      id: row.id,
-      body: row.body,
-      minioUrl: row.minioUrl,
-      categories: row.categories ?? [],
-      similarity: Number(row.similarity),
-      createdAt: row.createdAt,
+    results: entities.map((document, index) => ({
+      id: document.id,
+      body: document.body,
+      minioUrl: document.minioUrl,
+      categories: categoryNamesById.get(document.id) ?? [],
+      similarity: Number(raw[index]?.similarity),
+      createdAt: document.createdAt,
     })),
   });
 }
