@@ -48,10 +48,19 @@ Rebuild after changing `package.json` or `package-lock.json`:
 docker compose up --build
 ```
 
+## Admin panel
+
+http://localhost:3001/admin/initiatives lists every submitted social initiative (title, description, date, vote count, location, contact e-mail) and deletes it with **Usuń**. Deleting an initiative also deletes its votes.
+
+There is no admin account. The panel has no login and no password, so anyone who opens the URL can use it, whether logged in or not. `AuthGate` (`app/_components/auth-gate.tsx`) lets every path under `/admin` through, and the Server Actions in `app/admin/initiatives/actions.ts` check nothing. Nothing on the regular pages links to it; open it by typing the address.
+
+Do not deploy it publicly as is. Add authentication to the page and to its Server Actions first.
+
 ## What is included
 
 - Next.js dev server on port 3000
 - PostgreSQL 16 with the pgvector extension
 - TypeORM mapping for a `documents` table (`embedding vector(1536)`)
 - OpenAI client (`text-embedding-3-small`) used by the embed form once `OPENAI_API_KEY` is set
+- Social initiatives: `/initiatives` lists them ranked by votes (one vote per user, click **+** again to take it back), and `/initiatives/new` submits one. They are stored in the `initiatives` and `initiative_votes` tables, which TypeORM creates (`synchronize: true`).
 - Knowledge base seeded from `md-database/*.md` on every app start (`lib/seed-documents.ts`). Each file starts with a `title:` / `categories: [...]` frontmatter block. The embedding is built from the title only and is created once per document (clear `documents.embedding` to force a re-embed). Documents or categories without a backing file are deleted.
