@@ -1,5 +1,13 @@
 import "reflect-metadata";
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from "typeorm";
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  type Relation,
+} from "typeorm";
+import type { InitiativeVote } from "./initiative-vote";
 
 @Entity({ name: "initiatives" })
 export class Initiative {
@@ -20,6 +28,10 @@ export class Initiative {
 
   @Column({ type: "integer", name: "user_id", nullable: true })
   userId!: number | null;
+
+  // Referenced by entity name to avoid a runtime import cycle with ./initiative-vote.
+  @OneToMany("InitiativeVote", "initiative")
+  votes!: Relation<InitiativeVote[]>;
 
   @CreateDateColumn({ type: "timestamptz", name: "created_at" })
   createdAt!: Date;

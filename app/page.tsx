@@ -1,3 +1,5 @@
+import { HandHeart } from "@phosphor-icons/react/dist/ssr";
+import Link from "next/link";
 import { Logo } from "./components/Logo";
 import { PageShell } from "./components/PageShell";
 import { SearchBar } from "./components/SearchBar";
@@ -32,6 +34,14 @@ export default async function Home() {
           Odkryj innowacje{" "}
           <span className="shimmer-gradient slogan-accent whitespace-nowrap">w Małopolsce</span>
         </h1>
+        <Link
+          href="/initiatives"
+          className="fade-up liquid-glass-chip inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-medium text-accent transition-[transform,color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:text-accent-hover active:scale-[0.98]"
+          style={{ "--i": 2 } as React.CSSProperties}
+        >
+          <HandHeart aria-hidden size={20} weight="bold" />
+          Inicjatywy społeczne
+        </Link>
         <SuggestionBubbles
           groups={suggestionGroups}
           className="fade-up min-h-[340px] flex-1 sm:min-h-[420px]"

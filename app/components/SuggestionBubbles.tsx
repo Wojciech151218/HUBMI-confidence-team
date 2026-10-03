@@ -49,6 +49,8 @@ const IDLE_ALPHA = 0.1;
 const DRAG_ALPHA = 0.3;
 const ORBIT_SPEED = (2 * Math.PI) / (180 * 60); // one full turn every ~3 minutes at 60fps
 const DRIFT_FORCE = 0.01;
+// Share of the container that bubbles (plus their gaps) may cover; the rest is breathing room.
+const FILL_RATIO = 0.4;
 
 const STATE_SCALE: Record<BubbleState, number> = {
   idle: 1,
@@ -62,11 +64,26 @@ type SuggestionBubblesProps = {
   className?: string;
 };
 
-// Each topic gets its own anchor on a ring around the centre, so groups settle apart.
-function groupCenters(count: number, width: number, height: number) {
+// One shared diameter, shrinking as more bubbles have to fit into the container.
+function bubbleDiameter(count: number, width: number, height: number, gap: number) {
   const compact = width < 640;
-  const radiusX = width * (compact ? 0.22 : 0.28);
-  const radiusY = height * (compact ? 0.24 : 0.26);
+  const max = compact ? 92 : 136;
+  const min = compact ? 48 : 64;
+  if (count === 0) return max;
+  const cell = Math.sqrt((FILL_RATIO * width * height) / count);
+  return Math.max(min, Math.min(max, Math.floor(cell - gap * 2)));
+}
+
+// Each topic gets its own anchor on a ring around the centre, so groups settle apart.
+// The ring is widened until neighbouring clusters (of radius clusterRadius) no longer overlap,
+// but never so far that a cluster would leave the container.
+function groupCenters(count: number, width: number, height: number, clusterRadius: number) {
+  const compact = width < 640;
+  const spread = count > 1 ? clusterRadius / Math.sin(Math.PI / count) : 0;
+  const fit = (base: number, half: number) =>
+    Math.max(0, Math.min(Math.max(base, spread), half - clusterRadius));
+  const radiusX = fit(width * (compact ? 0.22 : 0.28), width / 2);
+  const radiusY = fit(height * (compact ? 0.24 : 0.26), height / 2);
   return Array.from({ length: count }, (_, i) => {
     const angle = (2 * Math.PI * i) / count - Math.PI / 2;
     return { x: width / 2 + Math.cos(angle) * radiusX, y: height / 2 + Math.sin(angle) * radiusY };
@@ -112,26 +129,28 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
     let width = container.clientWidth;
     let height = container.clientHeight;
 
-    const compact = width < 640;
-    // Every bubble shares one size; long labels wrap inside it.
-    const diameter = compact ? 92 : 136;
-    const gap = compact ? 4 : 8;
-
-    sizeRef.current = { width, height };
-    centersRef.current = groupCenters(groups.length, width, height);
-    orbitAngleRef.current = 0;
+    const largestGroup = Math.max(1, ...groups.map((group) => group.labels.length));
+    // Every bubble shares one size, derived from how many there are; long labels wrap inside it.
+    let gap = 0;
+    let diameter = 0;
+    const measure = () => {
+      gap = width < 640 ? 4 : 8;
+      diameter = bubbleDiameter(items.length, width, height, gap);
+      sizeRef.current = { width, height };
+      // A packed cluster of n bubbles spans roughly sqrt(n) bubbles across.
+      const clusterRadius = Math.sqrt(largestGroup) * (diameter / 2 + gap) * 1.1;
+      centersRef.current = groupCenters(groups.length, width, height, clusterRadius);
+      orbitAngleRef.current = 0;
+    };
+    measure();
     const centers = () => centersRef.current;
     const orbitCenter = (group: number) =>
       rotateAround(centers()[group], width / 2, height / 2, orbitAngleRef.current);
 
-    const nodes: BubbleNode[] = buttonRefs.current.map((button, i) => {
+    const nodes: BubbleNode[] = buttonRefs.current.map((_, i) => {
       const group = items[i].group;
-      if (button) {
-        button.style.width = `${diameter}px`;
-        button.style.height = `${diameter}px`;
-      }
       return {
-        r: diameter / 2,
+        r: 0,
         group,
         state: "idle",
         scale: 1,
@@ -145,6 +164,18 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
       };
     });
     nodesRef.current = nodes;
+
+    const applySize = () => {
+      nodes.forEach((node, i) => {
+        node.r = diameter / 2;
+        const button = buttonRefs.current[i];
+        if (!button) return;
+        button.style.width = `${diameter}px`;
+        button.style.height = `${diameter}px`;
+        button.style.fontSize = `${Math.max(10, Math.round(diameter * 0.11))}px`;
+      });
+    };
+    applySize();
 
     // Link every pair inside a topic, so dragging one bubble pulls the rest of its group.
     const links: BubbleLink[] = [];
@@ -205,21 +236,23 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
       }
     };
 
+    const linkForce = forceLink<BubbleNode, BubbleLink>(links)
+      .distance((link) => {
+        const source = link.source as BubbleNode;
+        const target = link.target as BubbleNode;
+        return source.r + target.r + gap * 2;
+      })
+      .strength(0.6);
+    const collideForce = forceCollide<BubbleNode>((d) => d.r + gap)
+      .strength(1)
+      .iterations(3);
+
     const sim = forceSimulation(nodes)
-      .force(
-        "link",
-        forceLink<BubbleNode, BubbleLink>(links)
-          .distance((link) => {
-            const source = link.source as BubbleNode;
-            const target = link.target as BubbleNode;
-            return source.r + target.r + gap * 2;
-          })
-          .strength(0.6),
-      )
+      .force("link", linkForce)
       .force("charge", forceManyBody<BubbleNode>().strength(-40))
       .force("anchor", anchorForce)
       .force("drift", driftForce)
-      .force("collide", forceCollide<BubbleNode>((d) => d.r + gap).strength(0.9))
+      .force("collide", collideForce)
       .alphaTarget(idleAlphaRef.current)
       .on("tick", () => {
         if (!reduceMotion && draggingGroupRef.current === null) {
@@ -238,9 +271,11 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
     const resizeObserver = new ResizeObserver(() => {
       width = container.clientWidth;
       height = container.clientHeight;
-      sizeRef.current = { width, height };
-      centersRef.current = groupCenters(groups.length, width, height);
-      orbitAngleRef.current = 0;
+      measure();
+      applySize();
+      // d3 caches radii and distances; re-setting the accessors makes it re-read them.
+      linkForce.distance(linkForce.distance());
+      collideForce.radius(collideForce.radius());
       if (reduceMotion) {
         sim.tick(300);
         render();
@@ -377,7 +412,7 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           data-state="idle"
-          className="bubble liquid-bubble absolute left-0 top-0 flex cursor-grab items-center justify-center rounded-full px-2.5 text-[11px] font-bold leading-tight text-foreground opacity-0 will-change-transform group-data-[ready=true]/bubbles:opacity-100 hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:cursor-grabbing sm:px-3 sm:text-sm"
+          className="bubble liquid-bubble absolute left-0 top-0 flex cursor-grab items-center justify-center rounded-full px-2.5 font-bold leading-tight text-foreground opacity-0 will-change-transform group-data-[ready=true]/bubbles:opacity-100 hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:cursor-grabbing sm:px-3"
         >
           <span className="relative z-[1] line-clamp-3 text-center break-words hyphens-auto">{label}</span>
         </button>
