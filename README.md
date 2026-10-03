@@ -40,7 +40,7 @@ docker compose down
 
 ## Live reload
 
-The app source is bind-mounted into the `web` container, and Next.js runs in dev mode with file polling. Edit files on the host (for example `app/page.tsx`) and refresh http://localhost:3001. Do not rebuild the image for source changes.
+The app source is bind-mounted into the `web` container, and Next.js runs in dev mode. On Linux, the bind mount delivers file events, so the dev server reloads without polling. Edit files on the host (for example `app/page.tsx`) and refresh http://localhost:3001. Do not rebuild the image for source changes.
 
 Rebuild after changing `package.json` or `package-lock.json`:
 
