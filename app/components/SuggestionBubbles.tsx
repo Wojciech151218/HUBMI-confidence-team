@@ -16,10 +16,14 @@ type BubbleNode = SimulationNodeDatum & { r: number };
 
 type DragState = { index: number; startX: number; startY: number; moved: boolean };
 
-const MIN_DIAMETER = 88;
-const PADDING = 6;
+const PADDING = 8;
 
-export function SuggestionBubbles({ labels }: { labels: string[] }) {
+type SuggestionBubblesProps = {
+  labels: string[];
+  className?: string;
+};
+
+export function SuggestionBubbles({ labels, className = "" }: SuggestionBubblesProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -27,6 +31,7 @@ export function SuggestionBubbles({ labels }: { labels: string[] }) {
   const simRef = useRef<Simulation<BubbleNode, undefined> | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
+  const labelsKey = labels.join("|");
 
   useEffect(() => {
     const container = containerRef.current;
@@ -36,9 +41,13 @@ export function SuggestionBubbles({ labels }: { labels: string[] }) {
     let width = container.clientWidth;
     let height = container.clientHeight;
 
+    const compact = width < 640;
+    const minDiameter = compact ? 104 : 136;
+    const labelPadding = compact ? 32 : 56;
+
     const nodes: BubbleNode[] = buttonRefs.current.map((button) => {
       const label = button?.firstElementChild as HTMLElement | null;
-      const diameter = Math.max((label?.offsetWidth ?? 0) + 32, MIN_DIAMETER);
+      const diameter = Math.max((label?.offsetWidth ?? 0) + labelPadding, minDiameter);
       if (button) {
         button.style.width = `${diameter}px`;
         button.style.height = `${diameter}px`;
@@ -95,7 +104,7 @@ export function SuggestionBubbles({ labels }: { labels: string[] }) {
       sim.stop();
       simRef.current = null;
     };
-  }, [labels]);
+  }, [labelsKey]);
 
   function localPoint(event: React.PointerEvent) {
     const rect = containerRef.current!.getBoundingClientRect();
@@ -148,7 +157,7 @@ export function SuggestionBubbles({ labels }: { labels: string[] }) {
       ref={containerRef}
       role="group"
       aria-label="Popularne wyszukiwania"
-      className="relative h-72 w-full touch-none select-none md:h-56"
+      className={`relative w-full touch-none select-none ${className}`.trim()}
     >
       {labels.map((label, i) => (
         <button
@@ -163,7 +172,7 @@ export function SuggestionBubbles({ labels }: { labels: string[] }) {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           style={{ opacity: 0 }}
-          className="liquid-glass-chip absolute left-0 top-0 flex cursor-grab items-center justify-center rounded-full text-sm font-medium text-foreground transition-[color,border-color,opacity] duration-300 will-change-transform hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:cursor-grabbing"
+          className="liquid-glass-chip absolute left-0 top-0 flex cursor-grab items-center justify-center rounded-full text-sm font-semibold text-foreground sm:text-lg transition-[color,border-color,opacity] duration-300 will-change-transform hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:cursor-grabbing"
         >
           <span className="whitespace-nowrap">{label}</span>
         </button>

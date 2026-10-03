@@ -2,18 +2,6 @@
 
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useState } from "react";
-import { SuggestionBubbles } from "./SuggestionBubbles";
-
-const SUGGESTIONS = [
-  "Dotacje",
-  "Wydarzenia",
-  "Inkubatory",
-  "Partnerzy",
-  "Startupy",
-  "Szkolenia",
-  "Mentoring",
-  "Badania i rozwój",
-];
 
 type SearchBarProps = {
   defaultValue?: string;
@@ -25,9 +13,8 @@ export function SearchBar({ defaultValue = "" }: SearchBarProps) {
   const isEmpty = query.trim().length === 0;
 
   return (
-    <div className="flex w-full flex-col gap-4">
-      <form action="/search" method="get" role="search" className="flex flex-col gap-2">
-        <label htmlFor="site-search" className="pl-5 text-sm font-medium text-muted">
+    <form action="/search" method="get" role="search" className="flex w-full flex-col gap-2">
+        <label htmlFor="site-search" className="sr-only">
           Czego szukasz?
         </label>
         <div className="liquid-glass flex items-center gap-2 p-2 pl-5">
@@ -55,9 +42,6 @@ export function SearchBar({ defaultValue = "" }: SearchBarProps) {
             Szukaj
           </button>
         </div>
-      </form>
-
-      <SuggestionBubbles labels={SUGGESTIONS} />
-    </div>
+    </form>
   );
 }
