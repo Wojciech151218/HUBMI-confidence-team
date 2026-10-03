@@ -1,0 +1,10 @@
+# rozpakowane pliki z zipów — ignoruj; inputy (pdf/docx) wrzucone wprost tutaj zostają
+*.pdf
+*.docx
+!/*.pdf
+!/*.docx
+
+# foldery wynikowe
+docs/
+markdown/
+processed/
