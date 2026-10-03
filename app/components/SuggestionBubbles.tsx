@@ -5,8 +5,6 @@ import {
   forceLink,
   forceManyBody,
   forceSimulation,
-  forceX,
-  forceY,
   type Simulation,
   type SimulationLinkDatum,
   type SimulationNodeDatum,
@@ -31,6 +29,8 @@ type BubbleNode = SimulationNodeDatum & {
   // Jelly stretch of the dragged bubble along its direction of travel.
   stretch: number;
   stretchAngle: number;
+  // Offset for the idle drift, so bubbles don't bob in sync.
+  phase: number;
 };
 type BubbleLink = SimulationLinkDatum<BubbleNode>;
 
@@ -43,6 +43,12 @@ type DragState = {
   lastTime: number;
   moved: boolean;
 };
+
+// Idle motion: the simulation never fully cools, groups orbit the centre and bubbles bob.
+const IDLE_ALPHA = 0.1;
+const DRAG_ALPHA = 0.3;
+const ORBIT_SPEED = (2 * Math.PI) / (180 * 60); // one full turn every ~3 minutes at 60fps
+const DRIFT_FORCE = 0.01;
 
 const STATE_SCALE: Record<BubbleState, number> = {
   idle: 1,
@@ -67,6 +73,14 @@ function groupCenters(count: number, width: number, height: number) {
   });
 }
 
+function rotateAround(point: { x: number; y: number }, cx: number, cy: number, angle: number) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const dx = point.x - cx;
+  const dy = point.y - cy;
+  return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+}
+
 export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -77,7 +91,10 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
   const suppressClickRef = useRef(false);
   const centersRef = useRef<{ x: number; y: number }[]>([]);
   const draggingGroupRef = useRef<number | null>(null);
-  const applyAnchorsRef = useRef<() => void>(() => {});
+  // Group centres are stored unrotated; the slow orbit rotates them around the container centre.
+  const orbitAngleRef = useRef(0);
+  const sizeRef = useRef({ width: 0, height: 0 });
+  const idleAlphaRef = useRef(IDLE_ALPHA);
   const reduceMotionRef = useRef(false);
   const targetStretchRef = useRef(0);
   const items = groups.flatMap((group, groupIndex) =>
@@ -91,6 +108,7 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     reduceMotionRef.current = reduceMotion;
+    idleAlphaRef.current = reduceMotion ? 0 : IDLE_ALPHA;
     let width = container.clientWidth;
     let height = container.clientHeight;
 
@@ -99,8 +117,12 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
     const labelPadding = compact ? 18 : 56;
     const gap = compact ? 4 : 8;
 
+    sizeRef.current = { width, height };
     centersRef.current = groupCenters(groups.length, width, height);
+    orbitAngleRef.current = 0;
     const centers = () => centersRef.current;
+    const orbitCenter = (group: number) =>
+      rotateAround(centers()[group], width / 2, height / 2, orbitAngleRef.current);
 
     const nodes: BubbleNode[] = buttonRefs.current.map((button, i) => {
       const group = items[i].group;
@@ -118,6 +140,8 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
         scaleVelocity: 0,
         stretch: 0,
         stretchAngle: 0,
+        // Mostly shared within a group, so a topic drifts together.
+        phase: group * 2.1 + Math.random() * 0.6,
         x: centers()[group].x + (Math.random() - 0.5) * 40,
         y: centers()[group].y + (Math.random() - 0.5) * 40,
       };
@@ -161,10 +185,27 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
       container.dataset.ready = "true";
     };
 
-    // The dragged bubble's group is released from its anchor so its links can pull it along.
-    const anchorStrength = (d: BubbleNode) => (d.group === draggingGroupRef.current ? 0 : 0.05);
-    const anchorX = () => forceX<BubbleNode>((d) => centers()[d.group].x).strength(anchorStrength);
-    const anchorY = () => forceY<BubbleNode>((d) => centers()[d.group].y).strength(anchorStrength);
+    // Pulls each bubble toward its (orbiting) group centre. The dragged bubble's group is
+    // released from its anchor so its links can pull it along.
+    const anchorForce = (alpha: number) => {
+      for (const node of nodes) {
+        if (node.group === draggingGroupRef.current) continue;
+        const center = orbitCenter(node.group);
+        node.vx = (node.vx ?? 0) + (center.x - (node.x ?? 0)) * 0.05 * alpha;
+        node.vy = (node.vy ?? 0) + (center.y - (node.y ?? 0)) * 0.05 * alpha;
+      }
+    };
+
+    // Gentle per-bubble bobbing while idle.
+    let tick = 0;
+    const driftForce = () => {
+      if (reduceMotion) return;
+      tick += 1;
+      for (const node of nodes) {
+        node.vx = (node.vx ?? 0) + Math.cos(tick * 0.01 + node.phase) * DRIFT_FORCE;
+        node.vy = (node.vy ?? 0) + Math.sin(tick * 0.013 + node.phase) * DRIFT_FORCE;
+      }
+    };
 
     const sim = forceSimulation(nodes)
       .force(
@@ -178,15 +219,17 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
           .strength(0.6),
       )
       .force("charge", forceManyBody<BubbleNode>().strength(-40))
-      .force("x", anchorX())
-      .force("y", anchorY())
+      .force("anchor", anchorForce)
+      .force("drift", driftForce)
       .force("collide", forceCollide<BubbleNode>((d) => d.r + gap).strength(0.9))
-      .on("tick", render);
+      .alphaTarget(idleAlphaRef.current)
+      .on("tick", () => {
+        if (!reduceMotion && draggingGroupRef.current === null) {
+          orbitAngleRef.current += ORBIT_SPEED;
+        }
+        render();
+      });
     simRef.current = sim;
-    applyAnchorsRef.current = () => {
-      sim.force("x", anchorX());
-      sim.force("y", anchorY());
-    };
 
     if (reduceMotion) {
       sim.stop();
@@ -197,8 +240,9 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
     const resizeObserver = new ResizeObserver(() => {
       width = container.clientWidth;
       height = container.clientHeight;
+      sizeRef.current = { width, height };
       centersRef.current = groupCenters(groups.length, width, height);
-      applyAnchorsRef.current();
+      orbitAngleRef.current = 0;
       if (reduceMotion) {
         sim.tick(300);
         render();
@@ -256,8 +300,7 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
     node.fy = node.y;
     draggingGroupRef.current = node.group;
     setStates(index);
-    applyAnchorsRef.current();
-    simRef.current?.alphaTarget(0.3).restart();
+    simRef.current?.alphaTarget(DRAG_ALPHA).restart();
   }
 
   function onPointerMove(event: React.PointerEvent<HTMLButtonElement>) {
@@ -292,16 +335,18 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
     const node = nodesRef.current[drag.index];
     node.fx = null;
     node.fy = null;
-    // Re-anchor the group where it was dropped, so it stays there.
+    // Re-anchor the group where it was dropped (stored unrotated, so it keeps orbiting from there).
     const members = nodesRef.current.filter((n) => n.group === node.group);
-    centersRef.current[node.group] = {
+    const dropped = {
       x: members.reduce((sum, n) => sum + (n.x ?? 0), 0) / members.length,
       y: members.reduce((sum, n) => sum + (n.y ?? 0), 0) / members.length,
     };
+    const { width, height } = sizeRef.current;
+    centersRef.current[node.group] = rotateAround(dropped, width / 2, height / 2, -orbitAngleRef.current);
     draggingGroupRef.current = null;
     setStates(null);
-    applyAnchorsRef.current();
-    simRef.current?.alphaTarget(0);
+    simRef.current?.alphaTarget(idleAlphaRef.current);
+    if (!reduceMotionRef.current) simRef.current?.restart();
     suppressClickRef.current = drag.moved;
     dragRef.current = null;
   }
