@@ -1,17 +1,12 @@
 import { Logo } from "./components/Logo";
 import { PageShell } from "./components/PageShell";
 import { SearchBar } from "./components/SearchBar";
-import { SuggestionBubbles } from "./components/SuggestionBubbles";
+import { SuggestionBubbles, type SuggestionGroup } from "./components/SuggestionBubbles";
 
-const SUGGESTIONS = [
-  "Dotacje",
-  "Wydarzenia",
-  "Inkubatory",
-  "Partnerzy",
-  "Startupy",
-  "Szkolenia",
-  "Mentoring",
-  "Badania i rozwój",
+const SUGGESTION_GROUPS: SuggestionGroup[] = [
+  { topic: "Finansowanie", labels: ["Dotacje", "Badania i rozwój"] },
+  { topic: "Wiedza", labels: ["Szkolenia", "Mentoring", "Wydarzenia"] },
+  { topic: "Ekosystem", labels: ["Startupy", "Inkubatory", "Partnerzy"] },
 ];
 
 export default function Home() {
@@ -22,14 +17,14 @@ export default function Home() {
           <Logo className="h-14 md:h-16" />
         </div>
         <h1
-          className="fade-up text-3xl font-semibold leading-[1.05] tracking-tighter md:text-5xl"
+          className="fade-up text-3xl font-bold leading-[1.1] tracking-tight md:text-5xl"
           style={{ "--i": 1 } as React.CSSProperties}
         >
           Odkryj innowacje{" "}
           <span className="whitespace-nowrap text-accent">w Małopolsce</span>
         </h1>
         <SuggestionBubbles
-          labels={SUGGESTIONS}
+          groups={SUGGESTION_GROUPS}
           className="fade-up min-h-[420px] flex-1"
         />
       </main>

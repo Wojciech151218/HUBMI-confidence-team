@@ -32,12 +32,12 @@ export function SearchBar({ defaultValue = "" }: SearchBarProps) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="np. dotacje dla startupów, wydarzenia, partnerzy"
-            className="min-w-0 flex-1 bg-transparent py-3 text-base text-foreground outline-none placeholder:text-muted sm:text-lg [&::-webkit-search-cancel-button]:hidden"
+            className="min-w-0 flex-1 bg-transparent py-3 font-secondary text-base text-foreground outline-none placeholder:text-muted sm:text-lg [&::-webkit-search-cancel-button]:hidden"
           />
           <button
             type="submit"
             disabled={isEmpty}
-            className="shrink-0 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white transition-[transform,background-color,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-accent-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:px-7 sm:text-base"
+            className="shrink-0 rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition-[transform,background-color,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-accent-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:px-7 sm:text-base"
           >
             Szukaj
           </button>

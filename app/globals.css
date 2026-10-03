@@ -20,8 +20,8 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
   --color-hairline: var(--hairline);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-ubuntu);
+  --font-secondary: var(--font-open-sans);
 }
 
 body {

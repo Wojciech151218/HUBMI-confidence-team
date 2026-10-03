@@ -2,28 +2,46 @@
 
 import {
   forceCollide,
+  forceLink,
   forceManyBody,
   forceSimulation,
   forceX,
   forceY,
   type Simulation,
+  type SimulationLinkDatum,
   type SimulationNodeDatum,
 } from "d3-force";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-type BubbleNode = SimulationNodeDatum & { r: number };
+export type SuggestionGroup = {
+  topic: string;
+  labels: string[];
+};
+
+type BubbleNode = SimulationNodeDatum & { r: number; group: number };
+type BubbleLink = SimulationLinkDatum<BubbleNode>;
 
 type DragState = { index: number; startX: number; startY: number; moved: boolean };
 
 const PADDING = 8;
 
 type SuggestionBubblesProps = {
-  labels: string[];
+  groups: SuggestionGroup[];
   className?: string;
 };
 
-export function SuggestionBubbles({ labels, className = "" }: SuggestionBubblesProps) {
+// Each topic gets its own anchor on a ring around the centre, so groups settle apart.
+function groupCenters(count: number, width: number, height: number) {
+  const radiusX = width * 0.28;
+  const radiusY = height * 0.26;
+  return Array.from({ length: count }, (_, i) => {
+    const angle = (2 * Math.PI * i) / count - Math.PI / 2;
+    return { x: width / 2 + Math.cos(angle) * radiusX, y: height / 2 + Math.sin(angle) * radiusY };
+  });
+}
+
+export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -31,7 +49,13 @@ export function SuggestionBubbles({ labels, className = "" }: SuggestionBubblesP
   const simRef = useRef<Simulation<BubbleNode, undefined> | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
-  const labelsKey = labels.join("|");
+  const centersRef = useRef<{ x: number; y: number }[]>([]);
+  const draggingGroupRef = useRef<number | null>(null);
+  const applyAnchorsRef = useRef<() => void>(() => {});
+  const items = groups.flatMap((group, groupIndex) =>
+    group.labels.map((label) => ({ label, group: groupIndex })),
+  );
+  const groupsKey = JSON.stringify(groups);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -45,7 +69,11 @@ export function SuggestionBubbles({ labels, className = "" }: SuggestionBubblesP
     const minDiameter = compact ? 104 : 136;
     const labelPadding = compact ? 32 : 56;
 
-    const nodes: BubbleNode[] = buttonRefs.current.map((button) => {
+    centersRef.current = groupCenters(groups.length, width, height);
+    const centers = () => centersRef.current;
+
+    const nodes: BubbleNode[] = buttonRefs.current.map((button, i) => {
+      const group = items[i].group;
       const label = button?.firstElementChild as HTMLElement | null;
       const diameter = Math.max((label?.offsetWidth ?? 0) + labelPadding, minDiameter);
       if (button) {
@@ -54,11 +82,20 @@ export function SuggestionBubbles({ labels, className = "" }: SuggestionBubblesP
       }
       return {
         r: diameter / 2,
-        x: width / 2 + (Math.random() - 0.5) * width * 0.6,
-        y: height / 2 + (Math.random() - 0.5) * height * 0.4,
+        group,
+        x: centers()[group].x + (Math.random() - 0.5) * 40,
+        y: centers()[group].y + (Math.random() - 0.5) * 40,
       };
     });
     nodesRef.current = nodes;
+
+    // Link every pair inside a topic, so dragging one bubble pulls the rest of its group.
+    const links: BubbleLink[] = [];
+    nodes.forEach((a, i) => {
+      nodes.forEach((b, j) => {
+        if (j > i && a.group === b.group) links.push({ source: i, target: j });
+      });
+    });
 
     const render = () => {
       nodes.forEach((node, i) => {
@@ -71,13 +108,32 @@ export function SuggestionBubbles({ labels, className = "" }: SuggestionBubblesP
       });
     };
 
+    // The dragged bubble's group is released from its anchor so its links can pull it along.
+    const anchorStrength = (d: BubbleNode) => (d.group === draggingGroupRef.current ? 0 : 0.05);
+    const anchorX = () => forceX<BubbleNode>((d) => centers()[d.group].x).strength(anchorStrength);
+    const anchorY = () => forceY<BubbleNode>((d) => centers()[d.group].y).strength(anchorStrength);
+
     const sim = forceSimulation(nodes)
-      .force("charge", forceManyBody<BubbleNode>().strength(-12))
-      .force("x", forceX<BubbleNode>(width / 2).strength(0.04))
-      .force("y", forceY<BubbleNode>(height / 2).strength(0.1))
+      .force(
+        "link",
+        forceLink<BubbleNode, BubbleLink>(links)
+          .distance((link) => {
+            const source = link.source as BubbleNode;
+            const target = link.target as BubbleNode;
+            return source.r + target.r + PADDING * 2;
+          })
+          .strength(0.6),
+      )
+      .force("charge", forceManyBody<BubbleNode>().strength(-40))
+      .force("x", anchorX())
+      .force("y", anchorY())
       .force("collide", forceCollide<BubbleNode>((d) => d.r + PADDING).strength(0.9))
       .on("tick", render);
     simRef.current = sim;
+    applyAnchorsRef.current = () => {
+      sim.force("x", anchorX());
+      sim.force("y", anchorY());
+    };
 
     if (reduceMotion) {
       sim.stop();
@@ -88,8 +144,8 @@ export function SuggestionBubbles({ labels, className = "" }: SuggestionBubblesP
     const resizeObserver = new ResizeObserver(() => {
       width = container.clientWidth;
       height = container.clientHeight;
-      sim.force("x", forceX<BubbleNode>(width / 2).strength(0.04));
-      sim.force("y", forceY<BubbleNode>(height / 2).strength(0.1));
+      centersRef.current = groupCenters(groups.length, width, height);
+      applyAnchorsRef.current();
       if (reduceMotion) {
         sim.tick(300);
         render();
@@ -104,7 +160,9 @@ export function SuggestionBubbles({ labels, className = "" }: SuggestionBubblesP
       sim.stop();
       simRef.current = null;
     };
-  }, [labelsKey]);
+    // groupsKey captures every change to groups/items.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupsKey]);
 
   function localPoint(event: React.PointerEvent) {
     const rect = containerRef.current!.getBoundingClientRect();
@@ -118,6 +176,8 @@ export function SuggestionBubbles({ labels, className = "" }: SuggestionBubblesP
     dragRef.current = { index, startX: event.clientX, startY: event.clientY, moved: false };
     node.fx = node.x;
     node.fy = node.y;
+    draggingGroupRef.current = node.group;
+    applyAnchorsRef.current();
     simRef.current?.alphaTarget(0.3).restart();
   }
 
@@ -139,6 +199,14 @@ export function SuggestionBubbles({ labels, className = "" }: SuggestionBubblesP
     const node = nodesRef.current[drag.index];
     node.fx = null;
     node.fy = null;
+    // Re-anchor the group where it was dropped, so it stays there.
+    const members = nodesRef.current.filter((n) => n.group === node.group);
+    centersRef.current[node.group] = {
+      x: members.reduce((sum, n) => sum + (n.x ?? 0), 0) / members.length,
+      y: members.reduce((sum, n) => sum + (n.y ?? 0), 0) / members.length,
+    };
+    draggingGroupRef.current = null;
+    applyAnchorsRef.current();
     simRef.current?.alphaTarget(0);
     suppressClickRef.current = drag.moved;
     dragRef.current = null;
@@ -159,7 +227,7 @@ export function SuggestionBubbles({ labels, className = "" }: SuggestionBubblesP
       aria-label="Popularne wyszukiwania"
       className={`relative w-full touch-none select-none ${className}`.trim()}
     >
-      {labels.map((label, i) => (
+      {items.map(({ label }, i) => (
         <button
           key={label}
           ref={(el) => {
@@ -172,7 +240,7 @@ export function SuggestionBubbles({ labels, className = "" }: SuggestionBubblesP
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           style={{ opacity: 0 }}
-          className="liquid-glass-chip absolute left-0 top-0 flex cursor-grab items-center justify-center rounded-full text-sm font-semibold text-foreground sm:text-lg transition-[color,border-color,opacity] duration-300 will-change-transform hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:cursor-grabbing"
+          className="liquid-glass-chip absolute left-0 top-0 flex cursor-grab items-center justify-center rounded-full text-sm font-medium text-foreground sm:text-lg transition-[color,border-color,opacity] duration-300 will-change-transform hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:cursor-grabbing"
         >
           <span className="whitespace-nowrap">{label}</span>
         </button>

@@ -21,17 +21,17 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
         <section className="flex flex-col items-center gap-2 text-center">
           {query ? (
             <>
-              <h1 className="text-2xl font-semibold tracking-tight">
+              <h1 className="text-2xl font-bold tracking-tight">
                 Wyniki dla „{query}”
               </h1>
-              <p className="max-w-[60ch] text-muted">
+              <p className="max-w-[60ch] font-secondary text-muted">
                 Wyszukiwarka jest w przygotowaniu. Wyniki pojawią się tutaj wkrótce.
               </p>
             </>
           ) : (
             <>
-              <h1 className="text-2xl font-semibold tracking-tight">Zacznij wyszukiwanie</h1>
-              <p className="max-w-[60ch] text-muted">
+              <h1 className="text-2xl font-bold tracking-tight">Zacznij wyszukiwanie</h1>
+              <p className="max-w-[60ch] font-secondary text-muted">
                 Wpisz hasło powyżej lub wybierz jedną z popularnych kategorii.
               </p>
             </>

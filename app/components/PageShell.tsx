@@ -16,7 +16,7 @@ export function PageShell({ children }: { children: React.ReactNode }) {
         />
       </div>
       {children}
-      <footer className="mx-auto w-full max-w-7xl px-4 py-6 text-sm text-muted sm:px-6">
+      <footer className="mx-auto w-full max-w-7xl px-4 py-6 font-secondary text-sm text-muted sm:px-6">
         © {new Date().getFullYear()} Hub Małopolskich Innowacji
       </footer>
     </div>
