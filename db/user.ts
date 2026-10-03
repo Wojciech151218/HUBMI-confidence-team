@@ -14,4 +14,7 @@ export class User {
 
   @Column({ type: "text", name: "password_hash" })
   passwordHash!: string;
+
+  @Column({ type: "uuid", name: "thread_id", nullable: true })
+  threadId!: string | null;
 }

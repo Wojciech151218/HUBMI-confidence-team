@@ -1,41 +1,42 @@
 import { NextResponse } from "next/server";
-import { runAgentRouter } from "@/lib/agents/router";
-
-const maxMessageLength = 2000;
+import { parseCategories, parseMessage, parseUserId } from "@/lib/agents/request";
+import { ensureUserThread, runAgentTurn } from "@/lib/agents/thread";
 
 export async function POST(request: Request) {
-  let body: { message?: unknown; categories?: unknown };
+  let body: { message?: unknown; userId?: unknown; categories?: unknown };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const message = typeof body.message === "string" ? body.message.trim() : "";
-  if (!message) {
-    return NextResponse.json({ error: "message is required" }, { status: 400 });
-  }
-  if (message.length > maxMessageLength) {
-    return NextResponse.json(
-      { error: `message must be at most ${maxMessageLength} characters` },
-      { status: 400 },
-    );
+  const message = parseMessage(body.message);
+  if (typeof message !== "string") {
+    return NextResponse.json({ error: message.error }, { status: 400 });
   }
 
-  const categories = Array.isArray(body.categories)
-    ? [
-        ...new Set(
-          body.categories
-            .filter((value): value is string => typeof value === "string")
-            .map((value) => value.trim().toLowerCase())
-            .filter(Boolean),
-        ),
-      ]
-    : [];
+  const userId = parseUserId(body.userId);
+  if (typeof userId !== "number") {
+    return NextResponse.json({ error: userId.error }, { status: 400 });
+  }
 
-  const result = await runAgentRouter(message, categories);
+  const thread = await ensureUserThread(userId);
+  if (!thread) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
 
-  console.log("agent POST:", result.agent, result.mode, message);
+  const categories = parseCategories(body.categories);
+  const result = await runAgentTurn({
+    threadId: thread.threadId,
+    message,
+    categories,
+  });
 
-  return NextResponse.json(result);
+  console.log("agent POST:", userId, thread.threadId, message);
+
+  return NextResponse.json({
+    answer: result.answer,
+    messages: result.messages,
+    threadId: thread.threadId,
+  });
 }
