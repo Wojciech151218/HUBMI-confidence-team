@@ -334,9 +334,9 @@ export function SuggestionBubbles({ groups, className = "" }: SuggestionBubblesP
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           data-state="idle"
-          className="bubble liquid-glass-chip absolute left-0 top-0 flex cursor-grab items-center justify-center rounded-full text-xs font-medium text-foreground opacity-0 will-change-transform group-data-[ready=true]/bubbles:opacity-100 hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:cursor-grabbing sm:text-lg"
+          className="bubble liquid-bubble absolute left-0 top-0 flex cursor-grab items-center justify-center rounded-full text-xs font-bold text-foreground opacity-0 will-change-transform group-data-[ready=true]/bubbles:opacity-100 hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:cursor-grabbing sm:text-lg"
         >
-          <span className="whitespace-nowrap">{label}</span>
+          <span className="relative z-[1] whitespace-nowrap">{label}</span>
         </button>
       ))}
     </div>
