@@ -40,7 +40,7 @@ export default async function Home() {
           style={{ "--i": 2 } as React.CSSProperties}
         >
           <HandHeart aria-hidden size={20} weight="bold" />
-          Inicjatywy społeczne
+          Inicjatywy lokalne
         </Link>
         <SuggestionBubbles
           groups={suggestionGroups}

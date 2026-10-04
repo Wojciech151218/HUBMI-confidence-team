@@ -22,7 +22,7 @@ export default function AdminInitiativesPage() {
             Zarządzanie inicjatywami
           </h1>
           <p className="font-secondary text-muted">
-            Panel administratora — usuwanie zgłoszonych inicjatyw społecznych.
+            Panel administratora — usuwanie zgłoszonych inicjatyw lokalnych.
           </p>
         </div>
         <div className="fade-up w-full" style={{ "--i": 2 } as React.CSSProperties}>

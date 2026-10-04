@@ -4,7 +4,7 @@ import { PageShell } from "../../components/PageShell";
 import { InitiativeForm } from "./InitiativeForm";
 
 export const metadata: Metadata = {
-  title: "Zgłoś inicjatywę społeczną | Hub Małopolskich Innowacji",
+  title: "Zgłoś inicjatywę lokalną | Hub Małopolskich Innowacji",
 };
 
 export default function NewInitiativePage() {
@@ -19,7 +19,7 @@ export default function NewInitiativePage() {
           style={{ "--i": 1 } as React.CSSProperties}
         >
           <h1 className="text-3xl font-bold leading-[1.1] tracking-tight md:text-4xl">
-            Zgłoś inicjatywę społeczną
+            Zgłoś inicjatywę lokalną
           </h1>
           <p className="font-secondary text-muted">
             Opowiedz nam o swoim pomyśle lub działaniu, które wspiera lokalną społeczność.

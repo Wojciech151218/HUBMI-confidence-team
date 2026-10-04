@@ -6,7 +6,7 @@ import { PageShell } from "../components/PageShell";
 import { InitiativeVoteList } from "./InitiativeVoteList";
 
 export const metadata: Metadata = {
-  title: "Inicjatywy społeczne | Hub Małopolskich Innowacji",
+  title: "Inicjatywy lokalne | Hub Małopolskich Innowacji",
 };
 
 export default function InitiativesPage() {
@@ -21,7 +21,7 @@ export default function InitiativesPage() {
           style={{ "--i": 1 } as React.CSSProperties}
         >
           <h1 className="text-3xl font-bold leading-[1.1] tracking-tight md:text-4xl">
-            Inicjatywy społeczne
+            Inicjatywy lokalne
           </h1>
           <p className="font-secondary text-muted">
             Głosuj na pomysły, które chcesz zobaczyć w Małopolsce. Najpopularniejsze trafiają na górę.
@@ -33,7 +33,7 @@ export default function InitiativesPage() {
           style={{ "--i": 2 } as React.CSSProperties}
         >
           <Plus aria-hidden size={20} weight="bold" />
-          Stwórz inicjatywę społeczną
+          Stwórz inicjatywę lokalną
         </Link>
         <div className="fade-up w-full" style={{ "--i": 3 } as React.CSSProperties}>
           <InitiativeVoteList />
